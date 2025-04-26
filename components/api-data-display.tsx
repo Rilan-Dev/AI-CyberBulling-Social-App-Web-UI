@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { enhancedApiService } from "@/services/enhanced-api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AlertCircle, RefreshCw } from "lucide-react"
-import { Post } from "@/context/post-context"
-import ErrorBoundary from "next/dist/client/components/error-boundary"
-import { enhancedApiService } from "@/services/enhanced-api"
+import ErrorBoundary from "@/components/error-boundary"
+import { Post } from "@/Model/post.model"
 
 export function ApiDataDisplay() {
   const [posts, setPosts] = useState<Post[]>([])
@@ -34,8 +34,29 @@ export function ApiDataDisplay() {
     fetchPosts()
   }, [])
 
+  const fallbackUI = (
+    <Card className="w-full max-w-md mx-auto mt-8">
+      <CardHeader>
+        <CardTitle className="text-red-500 flex items-center">
+          <AlertCircle className="mr-2 h-5 w-5" />
+          Something went wrong
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Alert variant="destructive" className="mb-4">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>An unexpected error occurred while fetching data</AlertDescription>
+        </Alert>
+        <Button onClick={() => window.location.reload()} className="w-full">
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Try again
+        </Button>
+      </CardContent>
+    </Card>
+  )
+
   return (
-    <>
+    <ErrorBoundary fallback={fallbackUI}>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold">API Data</h2>
@@ -72,7 +93,9 @@ export function ApiDataDisplay() {
               <Card key={post.id}>
                 <CardHeader>
                   <CardTitle>{post.user.username}</CardTitle>
-                  <CardDescription>Posted on: {new Date(post.created_at).toLocaleString()}</CardDescription>
+                  <CardDescription>
+                    Posted on: {post.created_at ? new Date(post.created_at).toLocaleString() : post.created_at}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p>{post.content}</p>
@@ -94,6 +117,6 @@ export function ApiDataDisplay() {
           </div>
         )}
       </div>
-    </>
+    </ErrorBoundary>
   )
 }

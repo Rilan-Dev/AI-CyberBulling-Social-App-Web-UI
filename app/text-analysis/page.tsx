@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Textarea } from "@/components/ui/textarea"
 import { AlertCircle, CheckCircle, AlertTriangle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { analyzeText } from "@/lib/api"
 import { AnalysisResult } from "@/Model/cyberbulling.model"
+import { analyzeText } from "@/services/api"
 
 export default function TextAnalysisPage() {
   const [text, setText] = useState("")

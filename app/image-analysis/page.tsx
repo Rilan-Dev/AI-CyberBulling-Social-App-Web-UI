@@ -8,8 +8,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { AlertCircle, CheckCircle, AlertTriangle, Upload, X, ImageIcon } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import Image from "next/image"
-import { analyzeImage } from "@/lib/api"
 import { AnalysisResult } from "@/Model/cyberbulling.model"
+import { analyzeImage } from "@/services/api"
 
 export default function ImageAnalysisPage() {
   const [image, setImage] = useState<string | null>(null)

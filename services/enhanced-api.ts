@@ -1,7 +1,6 @@
-import { Post } from "@/context/post-context"
-import { AnalysisResult } from "@/Model/cyberbulling.model"
-import { API_PATHS } from "@/services/api-endpoints"
-import { apiService } from "@/services/api.service"
+import { Post } from "@/Model/post.model"
+import { API_PATHS } from "./api-endpoints"
+import { apiService } from "./api.service"
 
 class ApiLogger {
   private static instance: ApiLogger
@@ -49,9 +48,9 @@ class ApiLogger {
 
     console.group(`❌ API Error: ${method} ${endpoint}`)
     console.log("Time:", new Date().toISOString())
-    console.log("Error:", error)
+    console.error("Error:", error)
     if (error.response) {
-      console.log("Response:", error.response)
+      console.error("Response:", error.response)
     }
     console.groupEnd()
   }
@@ -65,7 +64,7 @@ export class EnhancedApiService {
     apiLogger.logRequest(API_PATHS.POSTS, "GET")
 
     try {
-      const response = await apiService.getAllData<Post>({
+      const response = await apiService.getAllData<Post[]>({
         endpoint: API_PATHS.POSTS,
       })
 
@@ -73,8 +72,24 @@ export class EnhancedApiService {
         throw new Error("Failed to fetch posts")
       }
 
-      apiLogger.logResponse(API_PATHS.POSTS, "GET", 200, response.data)
-      return response.data
+      // If the response data is already an array, return it
+      if (Array.isArray(response.data)) {
+        apiLogger.logResponse(API_PATHS.POSTS, "GET", 200, response.data)
+        return response.data.flat()
+      }
+
+      // If the response has a results property, return that
+      if (response.data && typeof response.data === "object" && "results" in response.data) {
+        const results = (response.data as any).results
+        if (Array.isArray(results)) {
+          apiLogger.logResponse(API_PATHS.POSTS, "GET", 200, results)
+          return results
+        }
+      }
+
+      // If we can't find an array, return an empty array
+      console.warn("API response format not recognized:", response.data)
+      return []
     } catch (error) {
       apiLogger.logError(API_PATHS.POSTS, "GET", error)
       throw error
@@ -92,7 +107,7 @@ export class EnhancedApiService {
       })
 
       if (!response.success || !response.data) {
-        return Error("Failed to analyze text")
+        throw new Error("Failed to analyze text")
       }
 
       apiLogger.logResponse(API_PATHS.ANALYZE_TEXT, "POST", 200, response.data)
@@ -104,7 +119,7 @@ export class EnhancedApiService {
   }
 
   // Analyze image
-  async analyzeImage(image: File): Promise<AnalysisResult> {
+  async analyzeImage(image: File): Promise<any> {
     apiLogger.logRequest(API_PATHS.ANALYZE_IMAGE, "POST", null, { image: "[File]" })
 
     // Create FormData for file upload

@@ -2,8 +2,13 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import * as api from "@/lib/api"
-import { User, UserProfile } from "@/Model/users.model"
+import type { UserProfile } from "@/Model/users.model"
+import {
+  login as apiLogin,
+  register as apiRegister,
+  logout as apiLogout,
+  getCurrentUser as apiGetCurrentUser,
+} from "@/services/api"
 
 interface AuthContextType {
   userProfile: UserProfile | null
@@ -44,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
 
-        const userData = await api.getCurrentUser()
+        const userData = await apiGetCurrentUser()
         if (userData) {
           setUserProfile(userData)
         }
@@ -86,8 +91,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null)
 
     try {
-      await api.login(username, password)
-      const userData = await api.getCurrentUser()
+      await apiLogin(username, password)
+      const userData = await apiGetCurrentUser()
       setUserProfile(userData)
 
       // Redirect to home or the original requested page
@@ -107,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null)
 
     try {
-      await api.register(userData)
+      await apiRegister(userData)
       // After registration, log the user in
       await login(userData.username, userData.password)
     } catch (err: any) {
@@ -130,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true)
 
     try {
-      await api.logout()
+      await apiLogout()
       setUserProfile(null)
       router.push("/login")
     } catch (err) {

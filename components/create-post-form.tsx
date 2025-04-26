@@ -12,11 +12,11 @@ import { AlertCircle, AlertTriangle, CheckCircle, ImageIcon, X } from "lucide-re
 import Image from "next/image"
 import { usePosts } from "@/context/post-context"
 import { useAuth } from "@/context/auth-context"
-import { analyzeText, analyzeImage } from "@/lib/api"
+import { analyzeImage, analyzeText } from "@/services/api"
 
 export default function CreatePostForm() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { userProfile } = useAuth()
   const { addPost } = usePosts()
   const [text, setText] = useState("")
   const [image, setImage] = useState<string | null>(null)
@@ -122,18 +122,21 @@ export default function CreatePostForm() {
       // Add the post to our context
       await addPost({
         user: {
-          id: user?.id || "current-user",
-          name:
-            user?.first_name && user?.last_name
-              ? `${user.first_name} ${user.last_name}`
-              : user?.username || "Current User",
-          username: user?.username || "currentuser",
-          avatar: user?.profile?.profile_picture || "/placeholder.svg?height=40&width=40",
+          id: userProfile?.user.id ?? 0,
+          firstName: userProfile?.user?.firstName ?? "Current",
+          lastName: userProfile?.user?.lastName ?? "User",
+          username: userProfile?.user.username ?? "currentuser",
+          email: ""
         },
         content: text,
-        image: imageFile || null,
         status: getOverallStatus() || "clean",
-        reason: textResult?.reason || imageResult?.reason,
+        confidence: 0,
+        reason: null,
+        image: null,
+        like_count: 0,
+        is_liked: false,
+        text_analysis: null,
+        image_analysis: null
       })
 
       // Redirect to home page

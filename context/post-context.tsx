@@ -1,27 +1,27 @@
-"use client";
+"use client"
 
-import type React from "react";
-import { createContext, useContext, useState, useEffect } from "react";
-import * as api from "@/lib/api";
-import { apiService } from "@/services/api.service";
-import { API_PATHS } from "@/services/api-endpoints";
-import { Post } from "@/Model/post.model";
-import { User } from "@/Model/users.model";
-import { ApiResponse } from "@/services/base-api.service";
+import type React from "react"
+import { createContext, useContext, useState, useEffect } from "react"
+import { apiService } from "@/services/api.service"
+import { API_PATHS } from "@/services/api-endpoints"
+import type { Post } from "@/Model/post.model"
+import type { User } from "@/Model/users.model"
+import type { ApiResponse } from "@/services/base-api.service"
+import { createPost as apiCreatePost, likePost as apiLikePost } from "@/services/api"
 // Types for our posts
 interface PostContextType {
-  posts: Post[];
-  loading: boolean;
+  posts: Post[]
+  loading: boolean
   addPost: (
-    post: Omit<Post, "id" | "likes" | "comments" | "timestamp" | "created_at"> & { image: File | string | null }
-  ) => Promise<void>;
-  likePost: (id: string | number) => void;
-  unlikePost: (id: string | number) => void;
-  addComment: (id: string | number, comment: string) => void;
-  refreshPosts: () => Promise<void>;
+    post: Omit<Post, "id" | "likes" | "comments" | "timestamp" | "created_at"> & { image: File | string | null },
+  ) => Promise<void>
+  likePost: (id: string | number) => void
+  unlikePost: (id: string | number) => void
+  addComment: (id: string | number, comment: string) => void
+  refreshPosts: () => Promise<void>
 }
 
-const PostContext = createContext<PostContextType | undefined>(undefined);
+const PostContext = createContext<PostContextType | undefined>(undefined)
 
 // Sample user for demo
 export const currentUser: User = {
@@ -30,32 +30,30 @@ export const currentUser: User = {
   lastName: "Current User",
   username: "currentuser",
   email: "",
-};
-
+}
 
 export function PostProvider({ children }: { children: React.ReactNode }) {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [posts, setPosts] = useState<Post[]>([])
+  const [loading, setLoading] = useState(true)
 
   // Fetch posts on initial load
   useEffect(() => {
-    fetchPosts();
-  }, []);
+    fetchPosts()
+  }, [])
 
   // Function to fetch posts from API
   const fetchPosts = async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const { results, count, next, previous } =
-        await apiService.getAllPaginated<Post>({ endpoint: API_PATHS.POSTS });
-      console.log("Fetched posts:", results);
+      const { results, count, next, previous } = await apiService.getAllPaginated<Post>({ endpoint: API_PATHS.POSTS })
+      console.log("Fetched posts:", results)
       // Check if data exists and is an array
       if (Array.isArray(results)) {
-        console.log("Data is an array:", results);
+        console.log("Data is an array:", results)
         // If data is already in the expected format (from mock API)
         if (results.length > 0 && "user" in results[0]) {
-          setPosts(results as Post[]);
-          console.log("Set posts:", results);
+          setPosts(results as Post[])
+          console.log("Set posts:", results)
         } else {
           // Transform API data to match our Post interface
           const transformedPosts = results.map((post) => ({
@@ -70,56 +68,42 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
             content: post.content,
             image: post.image,
             likes: post.like_count || 0,
-            comments: Array.isArray(post.comments)
-              ? post.comments.length
-              : post.comments || 0,
+            comments: Array.isArray(post.comments) ? post.comments.length : post.comments || 0,
             timestamp: new Date(post.created_at).toLocaleString(),
             status: post.status,
             reason: post.reason,
-          })) as unknown as Post[];
-          setPosts(transformedPosts);
+          })) as unknown as Post[]
+          setPosts(transformedPosts)
         }
-      } else if (
-        results &&
-        typeof results === "object" &&
-        "results" in results
-      ) {
+      } else if (results && typeof results === "object" && "results" in results) {
         // Handle case where data is wrapped in an ApiResponse
-        const responseData = results as unknown as ApiResponse;
+        const responseData = results as unknown as ApiResponse
         if (Array.isArray(responseData.rawResponse)) {
-          setPosts(responseData.rawResponse);
+          setPosts(responseData.rawResponse)
         } else {
-          console.warn(
-            "API response data is not an array:",
-            responseData.rawResponse
-          );
-          setPosts([]);
+          console.warn("API response data is not an array:", responseData.rawResponse)
+          setPosts([])
         }
       } else {
         // Handle case where data is not an array
-        console.warn("API did not return an array of posts:", results);
-        setPosts([]);
+        console.warn("API did not return an array of posts:", results)
+        setPosts([])
       }
     } catch (error) {
-      console.error("Error fetching posts:", error);
+      console.error("Error fetching posts:", error)
       // If we couldn't get posts, set an empty array
-      setPosts([]);
+      setPosts([])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   // Function to add a new post
-  const addPost = async (
-    newPostData: Omit<
-      Post,
-      "id" | "likes" | "comments" | "timestamp" | "created_at"
-    >
-  ) => {
+  const addPost = async (newPostData: Omit<Post, "id" | "likes" | "comments" | "timestamp" | "created_at">) => {
     try {
       // If image is a string URL, we need to handle it differently
       if (typeof newPostData.image === "string") {
-        const newPost = await api.createPost({
+        const newPost = await apiCreatePost({
           content: newPostData.content,
           image_url: newPostData.image,
           status: newPostData.status,
@@ -156,13 +140,17 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
         setPosts((prevPosts) => [transformedPost, ...prevPosts])
       }
       // If image is a File object
-      else if (typeof newPostData.image === "object" && typeof File !== "undefined" && (newPostData.image as unknown as object) instanceof File) {
+      else if (
+        typeof newPostData.image === "object" &&
+        typeof File !== "undefined" &&
+        (newPostData.image as unknown as object) instanceof File
+      ) {
         const formData = new FormData()
         formData.append("content", newPostData.content)
         if (newPostData.image) {
-          formData.append("image", newPostData.image);
+          formData.append("image", newPostData.image)
         }
-        const newPost = await api.createPost(formData)
+        const newPost = await apiCreatePost(formData)
         // If the response is already in the expected format (from mock API)
         if (newPost && typeof newPost === "object" && "user" in newPost) {
           setPosts((prevPosts) => [newPost as Post, ...prevPosts])
@@ -194,7 +182,7 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
       }
       // If no image
       else {
-        const newPost = await api.createPost({
+        const newPost = await apiCreatePost({
           content: newPostData.content,
           status: newPostData.status,
           reason: newPostData.reason,
@@ -229,34 +217,34 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
         setPosts((prevPosts) => [transformedPost, ...prevPosts])
       }
     } catch (error) {
-      console.error("Error adding post:", error);
-      throw error;
+      console.error("Error adding post:", error)
+      throw error
     }
-  };
+  }
 
   // Function to like a post
   const likePost = async (id: string | number) => {
     try {
-      await api.likePost(id.toString());
+      await apiLikePost(id.toString())
       setPosts((prevPosts) =>
         prevPosts.map((post) => (post.id === id ? { ...post, likes: (post.like_count || 0) + 1 } : post)),
-      );
+      )
     } catch (error) {
-      console.error("Error liking post:", error);
+      console.error("Error liking post:", error)
     }
-  };
+  }
 
   // Function to unlike a post
   const unlikePost = async (id: string | number) => {
     try {
-      await api.likePost(id.toString()); // Same endpoint toggles like status
+      await apiLikePost(id.toString()) // Same endpoint toggles like status
       setPosts((prevPosts) =>
         prevPosts.map((post) => (post.id === id ? { ...post, likes: Math.max(0, (post.like_count || 0) - 1) } : post)),
       )
     } catch (error) {
-      console.error("Error unliking post:", error);
+      console.error("Error unliking post:", error)
     }
-  };
+  }
 
   // Function to add a comment to a post
   const addComment = async (id: string | number, comment: string) => {
@@ -287,14 +275,14 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
       //   })
       // );
     } catch (error) {
-      console.error("Error adding comment:", error);
+      console.error("Error adding comment:", error)
     }
-  };
+  }
 
   // Function to refresh posts
   const refreshPosts = async () => {
-    await fetchPosts();
-  };
+    await fetchPosts()
+  }
 
   return (
     <PostContext.Provider
@@ -310,15 +298,15 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
     >
       {children}
     </PostContext.Provider>
-  );
+  )
 }
 
 export function usePosts() {
-  const context = useContext(PostContext);
+  const context = useContext(PostContext)
   if (context === undefined) {
-    throw new Error("usePosts must be used within a PostProvider");
+    throw new Error("usePosts must be used within a PostProvider")
   }
-  return context;
+  return context
 }
 
-export type { Post, User };
+export type { Post, User }

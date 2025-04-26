@@ -65,7 +65,9 @@
 // export const mockGetPosts = async () => {
 //   // Simulate network delay
 //   await new Promise((resolve) => setTimeout(resolve, 500))
-//   return mockPosts
+
+//   // Ensure we're returning the array of mock posts
+//   return [...mockPosts]
 // }
 
 // export const mockGetCurrentUser = async () => {

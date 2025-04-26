@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { InfoIcon, AlertCircle, CheckCircle, Send, Upload, X } from "lucide-react"
-import * as apiService from "@/lib/api"
+import * as apiService from "@/services/api"
 import Image from "next/image"
 
 export function ApiTestingTools() {
