@@ -3,9 +3,10 @@ import { getHttpStatusMessage } from "./http-status-codes"
 export interface ApiResponse<T = any> {
   success: boolean
   data?: T | null
-  error?: string
+  error?: string | undefined
   message?: string
-  rawResponse?: Response // ← Add this line
+  rawResponse?: Response
+  status?: number // Add status property
 }
 
 export class BaseApiService {

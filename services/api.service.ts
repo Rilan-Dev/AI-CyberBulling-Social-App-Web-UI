@@ -1,91 +1,78 @@
-import { BaseApiService } from "./base-api.service";
-import type { ApiResponse } from "./base-api.service";
+import { BaseApiService } from "./base-api.service"
+import type { ApiResponse } from "./base-api.service"
 
 interface ApiRequestParams {
-  endpoint: string;
-  queryParams?: Record<string, any>;
-  body?: any;
-  headers?: Record<string, string>;
+  endpoint: string
+  queryParams?: Record<string, any>
+  body?: any
+  headers?: Record<string, string>
 }
 
 interface PaginatedResponse<T> {
-  results: T[];
-  count: number;
-  next: string | null;
-  previous: string | null;
+  results: T[]
+  count: number
+  next: string | null
+  previous: string | null
 }
 
 // Define interceptor types
-type RequestInterceptor = (
-  config: RequestInit
-) => RequestInit | Promise<RequestInit>;
-type ResponseInterceptor = (response: Response) => Response | Promise<Response>;
-type ErrorInterceptor = (error: any) => Promise<any>;
+type RequestInterceptor = (config: RequestInit) => RequestInit | Promise<RequestInit>
+type ResponseInterceptor = (response: Response) => Response | Promise<Response>
+type ErrorInterceptor = (error: any) => Promise<any>
 
 export class APIService extends BaseApiService {
-  private isRefreshing = false;
-  private refreshSubscribers: ((token: string) => void)[] = [];
-  private requestInterceptors: RequestInterceptor[] = [];
-  private responseInterceptors: ResponseInterceptor[] = [];
-  private errorInterceptors: ErrorInterceptor[] = [];
+  private isRefreshing = false
+  private refreshSubscribers: ((token: string) => void)[] = []
+  private requestInterceptors: RequestInterceptor[] = []
+  private responseInterceptors: ResponseInterceptor[] = []
+  private errorInterceptors: ErrorInterceptor[] = []
 
   constructor() {
-    super(process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api");
-    this.setupInterceptors();
+    super(process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api")
+    this.setupInterceptors()
   }
 
   // Add request interceptor
-  private addRequestInterceptor(
-    onFulfilled?: RequestInterceptor,
-    onRejected?: ErrorInterceptor
-  ): void {
+  private addRequestInterceptor(onFulfilled?: RequestInterceptor, onRejected?: ErrorInterceptor): void {
     if (onFulfilled) {
-      this.requestInterceptors.push(onFulfilled);
+      this.requestInterceptors.push(onFulfilled)
     }
     if (onRejected) {
-      this.errorInterceptors.push(onRejected);
+      this.errorInterceptors.push(onRejected)
     }
   }
 
   // Add response interceptor
-  private addResponseInterceptor(
-    onFulfilled?: ResponseInterceptor,
-    onRejected?: ErrorInterceptor
-  ): void {
+  private addResponseInterceptor(onFulfilled?: ResponseInterceptor, onRejected?: ErrorInterceptor): void {
     if (onFulfilled) {
-      this.responseInterceptors.push(onFulfilled);
+      this.responseInterceptors.push(onFulfilled)
     }
     if (onRejected) {
-      this.errorInterceptors.push(onRejected);
+      this.errorInterceptors.push(onRejected)
     }
   }
 
-  private async applyRequestInterceptors(
-    config: RequestInit
-  ): Promise<RequestInit> {
-    let modifiedConfig = { ...config };
+  private async applyRequestInterceptors(config: RequestInit): Promise<RequestInit> {
+    let modifiedConfig = { ...config }
     for (const interceptor of this.requestInterceptors) {
-      modifiedConfig = await interceptor(modifiedConfig);
+      modifiedConfig = await interceptor(modifiedConfig)
     }
-    return modifiedConfig;
+    return modifiedConfig
   }
 
-  private async applyResponseInterceptors(
-    response: Response
-  ): Promise<Response> {
-    let modifiedResponse = response;
+  private async applyResponseInterceptors(response: Response): Promise<Response> {
+    let modifiedResponse = response
     for (const interceptor of this.responseInterceptors) {
-      modifiedResponse = await interceptor(modifiedResponse);
+      modifiedResponse = await interceptor(modifiedResponse)
     }
-    return modifiedResponse;
+    return modifiedResponse
   }
 
   private setupInterceptors() {
     // Request interceptor to add auth token
     this.addRequestInterceptor(
       (config) => {
-        const token = this.getAccessToken();
-        console.log("Token:", token);
+        const token = this.getAccessToken()
         if (token) {
           return {
             ...config,
@@ -93,101 +80,129 @@ export class APIService extends BaseApiService {
               ...config.headers,
               Authorization: `Bearer ${token}`,
             },
-          };
+          }
         }
-        return config;
+        return config
       },
-      (error) => Promise.reject(error)
-    );
+      (error) => Promise.reject(error),
+    )
 
     // Response interceptor to handle token refresh
     this.addResponseInterceptor(
       (response) => response,
       async (error) => {
-        if (!error.response) return Promise.reject(error);
+        const originalRequest = error.config || {}
 
-        const originalRequest = error.config;
-
-        // If error is 401 and we have a refresh token
-        if (error.response.status === 401 && !originalRequest._retry) {
+        // Check if error is due to expired token (401 status)
+        if (error.status === 401 && !originalRequest._retry) {
           if (this.isRefreshing) {
             // If already refreshing, wait for the new token
             return new Promise((resolve) => {
               this.refreshSubscribers.push((token) => {
-                originalRequest.headers.Authorization = `Bearer ${token}`;
-                resolve(this.fetchApi(originalRequest.url, originalRequest));
-              });
-            });
+                // Replace the expired token with the new one
+                if (originalRequest.headers) {
+                  originalRequest.headers.Authorization = `Bearer ${token}`
+                } else {
+                  originalRequest.headers = { Authorization: `Bearer ${token}` }
+                }
+                resolve(this.fetchApi(originalRequest.url, originalRequest))
+              })
+            })
           }
 
-          originalRequest._retry = true;
-          this.isRefreshing = true;
+          originalRequest._retry = true
+          this.isRefreshing = true
 
           try {
-            const newToken = await this.refreshToken();
+            const refreshToken = this.getRefreshToken()
+            if (!refreshToken) {
+              // No refresh token available, redirect to login
+              this.clearTokens()
+              if (typeof window !== "undefined") {
+                window.location.href = "/login"
+              }
+              return Promise.reject(error)
+            }
+
+            const newToken = await this.refreshToken()
             if (newToken) {
-              this.setAccessToken(newToken);
-              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              this.setAccessToken(newToken)
 
               // Retry all queued requests with new token
-              this.refreshSubscribers.forEach((cb) => cb(newToken));
-              this.refreshSubscribers = [];
+              this.refreshSubscribers.forEach((cb) => cb(newToken))
+              this.refreshSubscribers = []
 
-              return this.fetchApi(originalRequest.url, originalRequest);
+              // Update the original request with new token
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${newToken}`
+              } else {
+                originalRequest.headers = { Authorization: `Bearer ${newToken}` }
+              }
+
+              return this.fetchApi(originalRequest.url, originalRequest)
+            } else {
+              // Token refresh failed, redirect to login
+              this.clearTokens()
+              if (typeof window !== "undefined") {
+                window.location.href = "/login"
+              }
+              return Promise.reject(error)
             }
           } catch (refreshError) {
-            this.clearTokens();
-            window.location.href = "/login"; // Redirect to login on refresh failure
-            return Promise.reject(refreshError);
+            this.clearTokens()
+            if (typeof window !== "undefined") {
+              window.location.href = "/login"
+            }
+            return Promise.reject(refreshError)
           } finally {
-            this.isRefreshing = false;
+            this.isRefreshing = false
           }
         }
 
-        return Promise.reject(error);
-      }
-    );
+        return Promise.reject(error)
+      },
+    )
   }
 
   private getAccessToken(): string | null {
-    return localStorage.getItem("accessToken");
+    return localStorage.getItem("accessToken")
   }
 
   private setAccessToken(token: string): void {
-    localStorage.setItem("accessToken", token);
+    localStorage.setItem("accessToken", token)
   }
 
   private getRefreshToken(): string | null {
-    return localStorage.getItem("refreshToken");
+    return localStorage.getItem("refreshToken")
   }
 
   private clearTokens(): void {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("accessToken")
+    localStorage.removeItem("refreshToken")
   }
 
   private async refreshToken(): Promise<string | null> {
-    const refreshToken = this.getRefreshToken();
-    if (!refreshToken) return null;
+    const refreshToken = this.getRefreshToken()
+    if (!refreshToken) return null
 
     try {
-      const response = await this.fetchApi<{ access: string }>(
-        "/token/refresh/",
-        {
-          method: "POST",
-          body: JSON.stringify({ refresh: refreshToken }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await fetch(`${this.baseUrl}/token/refresh/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ refresh: refreshToken }),
+      })
 
-      if (response.success && response.data?.access) {
-        return response.data.access;
+      if (!response.ok) {
+        throw new Error("Refresh token failed")
       }
-      return null;
+
+      const data = await response.json()
+      return data.access || null
     } catch (error) {
-      return null;
+      console.error("Error refreshing token:", error)
+      return null
     }
   }
 
@@ -195,134 +210,177 @@ export class APIService extends BaseApiService {
   public async fetchApi<T>(
     endpoint: string,
     config?: RequestInit,
-    queryParams?: Record<string, any>
+    queryParams?: Record<string, any>,
   ): Promise<ApiResponse<T>> {
     try {
       // Apply request interceptors
-      const modifiedConfig = await this.applyRequestInterceptors(config || {});
+      const modifiedConfig = await this.applyRequestInterceptors(config || {})
 
-      // Call parent fetchApi
-      const response = await super.fetchApi<T>(
-        endpoint,
-        modifiedConfig,
-        queryParams
-      );
-
-      // Apply response interceptors
-      if (!response.rawResponse) {
-        console.log("Raw response is undefined");
-        return response;
-        // throw new Error("Raw response is undefined");
+      // Build the URL with query parameters
+      let url = `${this.baseUrl}${endpoint}`
+      if (queryParams) {
+        const params = new URLSearchParams()
+        Object.entries(queryParams).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            params.append(key, String(value))
+          }
+        })
+        const queryString = params.toString()
+        if (queryString) {
+          url += `?${queryString}`
+        }
       }
-      const modifiedResponse = await this.applyResponseInterceptors(
-        response.rawResponse
-      );
+
+      // Make the request
+      const response = await fetch(url, modifiedConfig)
+      let data: T | null = null
+      let errorMessage: string | undefined = undefined
+
+      // Try to parse the response as JSON
+      try {
+        if (response.status !== 204) {
+          // No Content
+          data = await response.json()
+        }
+      } catch (e) {
+        // Response is not JSON
+        errorMessage = "Invalid response format"
+      }
+
+      // Check if the response is successful
+      const success = response.ok
+      if (!success && !errorMessage) {
+        errorMessage =
+          data && typeof data === "object" && "detail" in data
+            ? String(data.detail)
+            : `Request failed with status ${response.status}`
+      }
+
+      // Apply response interceptors if needed
+      const modifiedResponse = await this.applyResponseInterceptors(response)
 
       return {
-        ...response,
+        success,
+        data: success ? data : null,
+        error: success ? undefined : errorMessage,
+        status: response.status,
         rawResponse: modifiedResponse,
-      };
+      }
     } catch (error) {
       // Apply error interceptors
       for (const interceptor of this.errorInterceptors) {
         try {
-          return await interceptor(error);
+          return await interceptor(error)
         } catch (e) {
-          continue;
+          continue
         }
       }
-      throw error;
+
+      console.error("API request failed:", error)
+      return {
+        success: false,
+        data: null,
+        error: error instanceof Error ? error.message : "Unknown error",
+        status: 0,
+      }
     }
   }
 
   async create<T>(params: ApiRequestParams): Promise<ApiResponse<T>> {
-    const defaultHeaders = {
-      "Content-Type": "application/json",
-    };
+    let body: string | FormData
+    let headers: Record<string, string> = {}
 
-    const mergedHeaders = {
-      ...defaultHeaders,
-      ...(params.headers || {}), // If user passes custom headers, they overwrite default
-    };
+    // Check if body is FormData
+    if (params.body instanceof FormData) {
+      // For FormData, don't set Content-Type header - browser will set it with boundary
+      body = params.body
+      // Merge any other headers except Content-Type
+      if (params.headers) {
+        Object.entries(params.headers).forEach(([key, value]) => {
+          if (key.toLowerCase() !== "content-type") {
+            headers[key] = value
+          }
+        })
+      }
+    } else {
+      // For JSON data, stringify and set Content-Type
+      body = JSON.stringify(params.body)
+      headers = {
+        "Content-Type": "application/json",
+        ...(params.headers || {}),
+      }
+    }
 
     const response = await this.fetchApi<T>(params.endpoint, {
       method: "POST",
-      body: JSON.stringify(params.body),
-      headers: mergedHeaders,
-    });
-    return response;
+      body: body,
+      headers: headers,
+    })
+    return response
   }
 
   async getAllData<T>(params: ApiRequestParams): Promise<ApiResponse<T[]>> {
-    const response = await this.fetchApi<T[]>(
-      params.endpoint,
-      { method: "GET" },
-      params.queryParams
-    );
-    return response;
+    const response = await this.fetchApi<T[]>(params.endpoint, { method: "GET" }, params.queryParams)
+    return response
   }
 
   async getData<T>(params: ApiRequestParams): Promise<ApiResponse<T>> {
-    const response = await this.fetchApi<T>(
-      params.endpoint,
-      { method: "GET" },
-      params.queryParams
-    );
-    return response;
+    const response = await this.fetchApi<T>(params.endpoint, { method: "GET" }, params.queryParams)
+    return response
   }
 
   async getById<T>(params: ApiRequestParams): Promise<ApiResponse<T>> {
-    const response = await this.fetchApi<T>(
-      `${params.endpoint}/${params.queryParams?.id}`,
-      { method: "GET" }
-    );
-    return response;
+    const response = await this.fetchApi<T>(`${params.endpoint}/${params.queryParams?.id}`, { method: "GET" })
+    return response
   }
 
   async update<T>(params: ApiRequestParams): Promise<ApiResponse<T>> {
-    const defaultHeaders = {
-      "Content-Type": "application/json",
-    };
+    let body: string | FormData
+    let headers: Record<string, string> = {}
 
-    const mergedHeaders = {
-      ...defaultHeaders,
-      ...(params.headers || {}), // If user passes custom headers, they overwrite default
-    };
-
-    const response = await this.fetchApi<T>(
-      `${params.endpoint}/${params.queryParams?.id}`,
-      {
-        method: "PUT",
-        body: JSON.stringify(params.body),
-        headers: mergedHeaders,
+    // Check if body is FormData
+    if (params.body instanceof FormData) {
+      // For FormData, don't set Content-Type header - browser will set it with boundary
+      body = params.body
+      // Merge any other headers except Content-Type
+      if (params.headers) {
+        Object.entries(params.headers).forEach(([key, value]) => {
+          if (key.toLowerCase() !== "content-type") {
+            headers[key] = value
+          }
+        })
       }
-    );
+    } else {
+      // For JSON data, stringify and set Content-Type
+      body = JSON.stringify(params.body)
+      headers = {
+        "Content-Type": "application/json",
+        ...(params.headers || {}),
+      }
+    }
 
-    return response;
+    const response = await this.fetchApi<T>(`${params.endpoint}/${params.queryParams?.id}`, {
+      method: "PUT",
+      body: body,
+      headers: headers,
+    })
+
+    return response
   }
 
   async deleteItem<T>(params: ApiRequestParams): Promise<boolean> {
-    const response = await this.fetchApi<T>(
-      `${params.endpoint}/${params.queryParams?.id}`,
-      { method: "DELETE" }
-    );
-    return response.success;
+    const response = await this.fetchApi<T>(`${params.endpoint}/${params.queryParams?.id}`, { method: "DELETE" })
+    return response.success
   }
 
-  async getAllPaginated<T>(
-    params: ApiRequestParams
-  ): Promise<PaginatedResponse<T>> {
-    const response = await this.fetchApi<PaginatedResponse<T>>(
-      params.endpoint,
-      { method: "GET" },
-      params.queryParams
-    );
+  async getAllPaginated<T>(params: ApiRequestParams): Promise<PaginatedResponse<T>> {
+    const response = await this.fetchApi<PaginatedResponse<T>>(params.endpoint, { method: "GET" }, params.queryParams)
 
     if (!response.success || !response.data) {
-      return { results: [], count: 0, next: null, previous: null };
+      return { results: [], count: 0, next: null, previous: null }
     }
 
-    const data = response.data;
+    const data = response.data
 
     if (Array.isArray(data)) {
       return {
@@ -330,11 +388,11 @@ export class APIService extends BaseApiService {
         count: data.length,
         next: null,
         previous: null,
-      };
+      }
     }
 
-    return data;
+    return data
   }
 }
 
-export const apiService = new APIService();
+export const apiService = new APIService()

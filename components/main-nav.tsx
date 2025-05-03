@@ -13,7 +13,7 @@ export function MainNav() {
     { href: "/", label: "Home" },
     { href: "/explore", label: "Explore" },
     { href: "/notifications", label: "Notifications" },
-    { href: `/profile/${userProfile?.user.username}`, label: "Profile" },
+    // { href: `/profile/${userProfile?.user.username}`, label: "Profile" },
   ]
 
   return (

@@ -3,9 +3,10 @@
 import type React from "react"
 
 import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/context/auth-context"
 import { Loader2 } from "lucide-react"
+import { isProtectedRoute } from "@/config/routes"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -14,17 +15,18 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated, loading } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
-    // Only apply route protection if not in development mode
-    if (process.env.NODE_ENV === "production") {
-      if (!loading && !isAuthenticated) {
-        router.push("/login")
-      }
+    // Only check authentication for protected routes
+    if (!loading && !isAuthenticated && isProtectedRoute(pathname)) {
+      // Redirect to login with the current path as the redirect parameter
+      router.push(`/login?redirect=${encodeURIComponent(pathname || "/")}`)
     }
-  }, [isAuthenticated, loading, router])
+  }, [isAuthenticated, loading, router, pathname])
 
-  if (loading) {
+  // Show loading state while checking authentication
+  if (loading && isProtectedRoute(pathname)) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -32,10 +34,11 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     )
   }
 
-  // In development, always render children
-  if (process.env.NODE_ENV === "development" || isAuthenticated) {
+  // If authenticated or not a protected route, render children
+  if (isAuthenticated || !isProtectedRoute(pathname)) {
     return <>{children}</>
   }
 
+  // Return null while redirecting
   return null
 }

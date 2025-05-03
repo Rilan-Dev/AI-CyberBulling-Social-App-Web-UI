@@ -6,10 +6,30 @@ import type { User } from "@/Model/users.model"
 export const postService = {
   // Get all posts
   getPosts: async () => {
-    const response = await apiService.getData<Post[]>({
-      endpoint: API_PATHS.POSTS,
-    })
-    return response.data
+    try {
+      const response = await apiService.getData<Post[] | any>({
+        endpoint: API_PATHS.POSTS,
+      })
+
+      // Check if data exists and is an array
+      if (Array.isArray(response.data)) {
+        return response.data
+      } else if (response.data && typeof response.data === "object") {
+        // Handle case where data might be wrapped in another object
+        if (Array.isArray(response.data.results)) {
+          return response.data.results
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          return response.data.data
+        }
+      }
+
+      // If we can't determine the structure, return an empty array
+      console.warn("Unexpected API response format:", response.data)
+      return []
+    } catch (error) {
+      console.error("Error fetching posts:", error)
+      return []
+    }
   },
 
   // Get a specific post
@@ -20,23 +40,29 @@ export const postService = {
     return response.data
   },
 
-  // Create a new post
-  createPost: async (data: FormData) => {
+  createPost: async (formData: FormData) => {
+    // Log the FormData to verify it contains the image
+    console.log("FormData in postService.createPost:")
+    for (const pair of formData.entries()) {
+      console.log(`${pair[0]}: ${typeof pair[1] === "object" ? "File object" : pair[1]}`)
+    }
+
     const response = await apiService.create<Post>({
       endpoint: API_PATHS.POSTS,
-      queryParams: data,
+      body: formData,
       headers: {
         "Content-Type": "multipart/form-data",
       },
     })
+
     return response.data
   },
 
   // Update a post
   updatePost: async (id: number, data: FormData) => {
-    const response = await apiService.update<Post>({
+    const response = await apiService.create<Post>({
       endpoint: API_PATHS.POST_DETAIL(id),
-      queryParams:data,
+      body: data,
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -48,15 +74,16 @@ export const postService = {
   deletePost: async (id: number) => {
     const response = await apiService.deleteItem<void>({
       endpoint: API_PATHS.POST_DETAIL(id),
+      queryParams: { id },
     })
     return response
   },
 
   // Like or unlike a post
   toggleLike: async (id: number) => {
-    const response = await apiService.update<{ status: string }>({
+    const response = await apiService.create<{ status: string }>({
       endpoint: API_PATHS.POST_LIKE(id),
-      queryParams: {},
+      body: {},
     })
     return response.data
   },
@@ -81,7 +108,7 @@ export const postService = {
   addComment: async (postId: number, content: string) => {
     const response = await apiService.create<Comment>({
       endpoint: API_PATHS.COMMENTS,
-      queryParams: {
+      body: {
         post: postId,
         content,
       },
@@ -91,9 +118,29 @@ export const postService = {
 
   // Get feed posts
   getFeed: async () => {
-    const response = await apiService.getData<Post[]>({
-      endpoint: API_PATHS.FEED,
-    })
-    return response.data
+    try {
+      const response = await apiService.getData<Post[] | any>({
+        endpoint: API_PATHS.FEED,
+      })
+
+      // Check if data exists and is an array
+      if (Array.isArray(response.data)) {
+        return response.data
+      } else if (response.data && typeof response.data === "object") {
+        // Handle case where data might be wrapped in another object
+        if (Array.isArray(response.data.results)) {
+          return response.data.results
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          return response.data.data
+        }
+      }
+
+      // If we can't determine the structure, return an empty array
+      console.warn("Unexpected API response format:", response.data)
+      return []
+    } catch (error) {
+      console.error("Error fetching feed:", error)
+      return []
+    }
   },
 }

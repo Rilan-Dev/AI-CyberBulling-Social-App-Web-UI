@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
 
@@ -44,18 +45,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         // Check if we have a token in localStorage
         const token = localStorage.getItem("accessToken")
-        if (!token && process.env.NODE_ENV !== "development") {
+        const refreshToken = localStorage.getItem("refreshToken")
+
+        if (!token && !refreshToken) {
+          setIsAuthenticated(false)
           setLoading(false)
           return
         }
 
-        const userData = await apiGetCurrentUser()
-        if (userData) {
-          setUserProfile(userData)
+        // If we have a token, try to get the current user
+        try {
+          const userData = await apiGetCurrentUser()
+          if (userData) {
+            setUserProfile(userData)
+            setIsAuthenticated(true)
+          } else {
+            // If userData is null, clear tokens
+            localStorage.removeItem("accessToken")
+            localStorage.removeItem("refreshToken")
+            setIsAuthenticated(false)
+          }
+        } catch (err) {
+          console.error("Error getting current user:", err)
+          // Clear tokens if getting user fails
+          localStorage.removeItem("accessToken")
+          localStorage.removeItem("refreshToken")
+          setIsAuthenticated(false)
         }
       } catch (err) {
         console.error("Error checking auth status:", err)
-        // Don't set an error here, just continue with null user
+        setIsAuthenticated(false)
       } finally {
         setLoading(false)
       }
@@ -64,44 +83,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuthStatus()
   }, [])
 
-  // Redirect to login if accessing protected route while not authenticated
-  useEffect(() => {
-    // Only apply route protection if not in development mode
-    if (process.env.NODE_ENV === "production") {
-      const protectedRoutes = ["/create-post", "/settings", "/dashboard"]
-      const publicRoutes = ["/login", "/register", "/forgot-password"]
-
-      if (!loading) {
-        if (!userProfile && protectedRoutes.some((route) => pathname?.startsWith(route))) {
-          router.push(`/login?redirect=${encodeURIComponent(pathname || "/")}`)
-        } else if (userProfile && publicRoutes.includes(pathname || "")) {
-          router.push("/")
-        }
-      }
-    } else {
-      // In development, don't redirect but still mark as not loading
-      if (loading) {
-        setLoading(false)
-      }
-    }
-  }, [userProfile, loading, pathname, router])
-
   const login = async (username: string, password: string) => {
     setLoading(true)
     setError(null)
 
     try {
-      await apiLogin(username, password)
-      const userData = await apiGetCurrentUser()
-      setUserProfile(userData)
+      const loginResponse = await apiLogin(username, password)
 
-      // Redirect to home or the original requested page
-      const params = new URLSearchParams(window.location.search)
-      const redirectPath = params.get("redirect") || "/"
-      router.push(redirectPath)
+      if (!loginResponse || !loginResponse.access) {
+        throw new Error("Login failed. Please check your credentials.")
+      }
+
+      // Store tokens
+      localStorage.setItem("accessToken", loginResponse.access)
+      if (loginResponse.refresh) {
+        localStorage.setItem("refreshToken", loginResponse.refresh)
+      }
+
+      // Get user data
+      const userData = await apiGetCurrentUser()
+      if (userData) {
+        setUserProfile(userData)
+        setIsAuthenticated(true)
+
+        // Redirect to home or the original requested page
+        const params = new URLSearchParams(window.location.search)
+        const redirectPath = params.get("redirect") || "/"
+        router.push(redirectPath)
+      } else {
+        throw new Error("Failed to get user data after login")
+      }
     } catch (err: any) {
       console.error("Login error:", err)
-      setError(err.response?.data?.detail || "Invalid username or password")
+      setError(err.response?.data?.detail || err.message || "Invalid username or password")
+      setIsAuthenticated(false)
     } finally {
       setLoading(false)
     }
@@ -137,11 +152,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await apiLogout()
       setUserProfile(null)
+      setIsAuthenticated(false)
+      localStorage.removeItem("accessToken")
+      localStorage.removeItem("refreshToken")
       router.push("/login")
     } catch (err) {
       console.error("Logout error:", err)
       // Even if there's an error, clear the user state
       setUserProfile(null)
+      setIsAuthenticated(false)
+      localStorage.removeItem("accessToken")
+      localStorage.removeItem("refreshToken")
     } finally {
       setLoading(false)
     }
@@ -161,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         logout,
         clearError,
-        isAuthenticated: !!userProfile,
+        isAuthenticated,
       }}
     >
       {children}

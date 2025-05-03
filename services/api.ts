@@ -3,7 +3,6 @@ import { apiLogger, enhancedApiService } from "./enhanced-api"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api"
 
-// Flag to determine if we should use mock A
 // Create axios instance
 const api = axios.create({
   baseURL: API_URL,
@@ -13,11 +12,22 @@ const api = axios.create({
   withCredentials: true, // Include cookies for authentication
 })
 
+// Set up request interceptor to add token to every request
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("accessToken")
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => Promise.reject(error),
+)
+
 // Authentication APIs
 export const login = async (username: string, password: string) => {
   try {
     apiLogger.logRequest("/token/", "POST", null, { username })
-
 
     // Updated endpoint to match Django REST framework's token auth
     const response = await api.post("/token/", { username, password })
@@ -44,7 +54,6 @@ export const register = async (userData: any) => {
   try {
     apiLogger.logRequest("/users/register/", "POST", null, { ...userData, password: "[REDACTED]" })
 
-
     const response = await api.post("/users/register/", userData)
     apiLogger.logResponse("/users/register/", "POST", 200, response.data)
     return response.data
@@ -58,7 +67,6 @@ export const register = async (userData: any) => {
 export const logout = async () => {
   try {
     apiLogger.logRequest("/logout/", "POST")
-
 
     // For token-based auth, we just remove the tokens
     localStorage.removeItem("accessToken")
@@ -77,19 +85,37 @@ export const getCurrentUser = async () => {
   try {
     apiLogger.logRequest("/users/me/", "GET")
 
-
     // Set auth header from localStorage if available
     const token = localStorage.getItem("accessToken")
     if (token) {
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`
+    } else {
+      // If no token, don't make the request
+      return null
     }
 
     const response = await api.get("/users/me/")
     apiLogger.logResponse("/users/me/", "GET", 200, response.data)
     return response.data
-  } catch (error) {
+  } catch (error: any) {
     apiLogger.logError("/users/me/", "GET", error)
     console.error("Get current user error:", error)
+
+    // If 401 error, clear tokens
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem("accessToken")
+      localStorage.removeItem("refreshToken")
+      delete api.defaults.headers.common["Authorization"]
+
+      // If in browser context, redirect to login
+      if (typeof window !== "undefined") {
+        const currentPath = window.location.pathname
+        if (currentPath !== "/login" && currentPath !== "/register") {
+          window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`
+        }
+      }
+    }
+
     return null
   }
 }
@@ -97,12 +123,13 @@ export const getCurrentUser = async () => {
 // Post APIs
 export const getPosts = async () => {
   try {
-
-    // Use enhanced API service for better error handling and validation
-    return await enhancedApiService.getPosts()
+    apiLogger.logRequest("/posts", "GET")
+    const response = await api.get("/posts")
+    apiLogger.logResponse("/posts", "GET", 200, response.data)
+    return response.data
   } catch (error) {
+    apiLogger.logError("/posts", "GET", error)
     console.error("Error fetching posts:", error)
-    // Return empty array on error
     return []
   }
 }
@@ -122,14 +149,22 @@ export const getPost = async (id: string) => {
 
 export const createPost = async (postData: FormData | any) => {
   try {
+    apiLogger.logRequest("/posts", "POST")
 
-    const response = await api.post("/posts/", postData, {
-      headers: {
-        "Content-Type": postData instanceof FormData ? "multipart/form-data" : "application/json",
-      },
-    })
+    // Handle FormData properly
+    let headers = {}
+    if (postData instanceof FormData) {
+      // Don't set Content-Type for FormData - browser will set it with boundary
+      headers = {}
+    } else {
+      headers = { "Content-Type": "application/json" }
+    }
+
+    const response = await api.post("/posts", postData, { headers })
+    apiLogger.logResponse("/posts", "POST", 200, response.data)
     return response.data
   } catch (error) {
+    apiLogger.logError("/posts", "POST", error)
     console.error("Error creating post:", error)
     throw error
   }
@@ -137,10 +172,12 @@ export const createPost = async (postData: FormData | any) => {
 
 export const likePost = async (id: string) => {
   try {
-
-    // Use enhanced API service
-    return await enhancedApiService.likePost(id)
+    apiLogger.logRequest(`/posts/${id}/like`, "POST")
+    const response = await api.post(`/posts/${id}/like`, {})
+    apiLogger.logResponse(`/posts/${id}/like`, "POST", 200, response.data)
+    return response.data
   } catch (error) {
+    apiLogger.logError(`/posts/${id}/like`, "POST", error)
     console.error("Error liking post:", error)
     throw error
   }
@@ -148,10 +185,12 @@ export const likePost = async (id: string) => {
 
 export const addComment = async (postId: string, content: string) => {
   try {
-
-    // Use enhanced API service
-    return await enhancedApiService.addComment(postId, content)
+    apiLogger.logRequest("/comments", "POST")
+    const response = await api.post("/comments", { post: postId, content })
+    apiLogger.logResponse("/comments", "POST", 200, response.data)
+    return response.data
   } catch (error) {
+    apiLogger.logError("/comments", "POST", error)
     console.error("Error adding comment:", error)
     throw error
   }
@@ -160,7 +199,6 @@ export const addComment = async (postId: string, content: string) => {
 // Analysis APIs
 export const analyzeText = async (text: string) => {
   try {
-
     // Use enhanced API service
     return await enhancedApiService.analyzeText(text)
   } catch (error) {
@@ -171,7 +209,6 @@ export const analyzeText = async (text: string) => {
 
 export const analyzeImage = async (image: File) => {
   try {
-
     // Use enhanced API service
     return await enhancedApiService.analyzeImage(image)
   } catch (error) {
@@ -186,32 +223,55 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
-    // If the error is 401 and we have a refresh token
+    // If the error is 401 and we have a refresh token and haven't tried to refresh yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
       try {
         const refreshToken = localStorage.getItem("refreshToken")
         if (!refreshToken) {
+          // No refresh token, redirect to login
+          if (typeof window !== "undefined") {
+            const currentPath = window.location.pathname
+            if (currentPath !== "/login" && currentPath !== "/register") {
+              window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`
+            }
+          }
           return Promise.reject(error)
         }
 
         // Get a new access token
-        const response = await axios.post(`${API_URL}/token/refresh/`, {
+        const response = await axios.post(`${API_URL}token/refresh/`, {
           refresh: refreshToken,
         })
 
-        // Update tokens
-        localStorage.setItem("accessToken", response.data.access)
-        api.defaults.headers.common["Authorization"] = `Bearer ${response.data.access}`
+        if (response.data.access) {
+          // Update tokens
+          localStorage.setItem("accessToken", response.data.access)
+          api.defaults.headers.common["Authorization"] = `Bearer ${response.data.access}`
 
-        // Retry the original request
-        return api(originalRequest)
+          // Update the original request with the new token
+          originalRequest.headers.Authorization = `Bearer ${response.data.access}`
+
+          // Retry the original request
+          return api(originalRequest)
+        } else {
+          throw new Error("Failed to refresh token")
+        }
       } catch (refreshError) {
         // If refresh fails, logout
         localStorage.removeItem("accessToken")
         localStorage.removeItem("refreshToken")
         delete api.defaults.headers.common["Authorization"]
+
+        // Redirect to login
+        if (typeof window !== "undefined") {
+          const currentPath = window.location.pathname
+          if (currentPath !== "/login" && currentPath !== "/register") {
+            window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`
+          }
+        }
+
         return Promise.reject(refreshError)
       }
     }

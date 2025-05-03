@@ -38,9 +38,9 @@ export default function LoginPage() {
       username: formData.username,
       password: formData.password,
     }
-    try{
+    try {
       const response = await apiService.create({
-        endpoint: API_PATHS.TOKEN,
+        endpoint: API_PATHS.LOGIN,
         body: params,
       })
 
@@ -55,8 +55,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="container flex items-center justify-center min-h-[80vh]">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-background flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold">CyberSocial</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Sign in to your account</p>
+        </div>
+
         <Card>
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center">Login</CardTitle>

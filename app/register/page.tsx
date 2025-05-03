@@ -56,11 +56,16 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="container flex items-center justify-center min-h-[80vh] py-8">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-background flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold">CyberSocial</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Create a new account</p>
+        </div>
+
         <Card>
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Create an account</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">Register</CardTitle>
             <CardDescription className="text-center">Enter your information to create an account</CardDescription>
           </CardHeader>
           <CardContent>

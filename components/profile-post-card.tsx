@@ -7,6 +7,7 @@ import { Heart, MessageCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import type { Post } from "@/context/post-context"
+import SafeImage from "./ui/safeImage"
 
 interface ProfilePostCardProps {
   post: Post
@@ -31,8 +32,8 @@ export function ProfilePostCard({ post }: ProfilePostCardProps) {
     >
       {post.image ? (
         <div className="relative w-full h-full">
-          <Image
-            src={post.image || "/placeholder.svg"}
+          <SafeImage
+            src={post.image}
             alt="Post image"
             fill
             className="object-cover"
