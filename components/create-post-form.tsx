@@ -15,6 +15,28 @@ import { useAuth } from "@/context/auth-context"
 import { analyzeImage, analyzeText } from "@/services/api"
 import type { AnalysisResult } from "@/Model/cyberbulling.model"
 import { toast } from "@/components/ui/use-toast"
+import { motion } from "framer-motion"
+
+// Animation variants
+const fadeIn = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.6 } },
+}
+
+const slideUp = {
+  hidden: { y: 20, opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { duration: 0.5 } },
+}
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+}
 
 export default function CreatePostForm() {
   const router = useRouter()
@@ -352,218 +374,288 @@ export default function CreatePostForm() {
   }, [pendingAnalysis, isAnalyzing, isSubmitting])
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Create Post</h1>
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,100,255,0.1),transparent_70%)]"></div>
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        ></div>
+      </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>New Post</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <Textarea
-                placeholder="What's on your mind?"
-                className="min-h-[120px]"
-                value={text}
-                onChange={(e) => {
-                  setText(e.target.value)
-                  setTextResult(null)
-                  setAnalysisComplete(false)
-                  setPendingAnalysis(true)
-                }}
-              />
+      <div className="container mx-auto py-8 relative z-10">
+        <div className="max-w-2xl mx-auto">
+          <motion.h1
+            className="text-3xl font-bold mb-6 text-white"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            Create Post
+          </motion.h1>
 
-              {/* Text Analysis Result */}
-              {analysisComplete && textResult && text.trim() && (
-                <div className="mt-2">
-                  <div
-                    className={`p-2 rounded-md text-sm ${
-                      textResult.status === "clean"
-                        ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300"
-                        : textResult.status === "flagged"
-                          ? "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300"
-                          : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {textResult.status === "clean" && <CheckCircle className="h-4 w-4" />}
-                      {textResult.status === "flagged" && <AlertTriangle className="h-4 w-4" />}
-                      {textResult.status === "blocked" && <AlertCircle className="h-4 w-4" />}
-                      <span className="font-medium capitalize">{textResult.status} Content</span>
-                      <span className="ml-auto text-xs">{Math.round(textResult.confidence * 100)}% confidence</span>
-                    </div>
-                    {textResult.reason && <p className="mt-1 text-sm">{textResult.reason}</p>}
-                  </div>
-                </div>
-              )}
-            </div>
+          <motion.div variants={fadeIn} initial="hidden" animate="visible">
+            <Card className="bg-gray-900/70 backdrop-blur-lg border border-gray-800 text-gray-200">
+              <CardHeader>
+                <CardTitle className="text-white">New Post</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <motion.div variants={slideUp}>
+                  <Textarea
+                    placeholder="What's on your mind?"
+                    className="min-h-[120px] bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                    value={text}
+                    onChange={(e) => {
+                      setText(e.target.value)
+                      setTextResult(null)
+                      setAnalysisComplete(false)
+                      setPendingAnalysis(true)
+                    }}
+                  />
 
-            <div>
-              <div
-                className={`relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors ${
-                  isDragging
-                    ? "border-primary bg-primary/5"
-                    : "border-gray-300 hover:border-primary dark:border-gray-700"
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-
-                {image ? (
-                  <div className="relative h-full w-full">
-                    <div className={`relative ${shouldBlurImage() ? "overflow-hidden rounded-lg" : ""}`}>
-                      <Image
-                        src={image || "/placeholder.svg"}
-                        alt="Uploaded image"
-                        className={`mx-auto max-h-[300px] w-auto rounded-lg object-contain ${
-                          shouldBlurImage() ? "blur-md" : ""
-                        }`}
-                        width={400}
-                        height={300}
-                      />
-
-                      {/* Blocked content overlay */}
-                      {analysisComplete && imageResult?.status === "blocked" && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
-                          <div className="text-white text-center p-4">
-                            <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-                            <p className="font-bold">Blocked Content</p>
-                            <p className="text-sm mt-1">
-                              {imageResult.reason || "This image violates our content policy"}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute right-0 top-0 h-8 w-8 rounded-full"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        resetImage()
-                      }}
+                  {/* Text Analysis Result */}
+                  {analysisComplete && textResult && text.trim() && (
+                    <motion.div
+                      className="mt-2"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      transition={{ duration: 0.3 }}
                     >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <ImageIcon className="mb-4 h-10 w-10 text-gray-400" />
-                    <p className="mb-2 text-sm font-medium">Drag and drop an image here, or click to browse</p>
-                    <p className="text-xs text-gray-500 mb-2">Supports JPG, PNG, GIF up to 10MB</p>
-                    <p className="text-xs font-medium text-red-500">Image is required</p>
-                  </>
-                )}
-              </div>
+                      <div
+                        className={`p-2 rounded-md text-sm ${
+                          textResult.status === "clean"
+                            ? "bg-green-900/20 text-green-300 border border-green-800/50"
+                            : textResult.status === "flagged"
+                              ? "bg-yellow-900/20 text-yellow-300 border border-yellow-800/50"
+                              : "bg-red-900/20 text-red-300 border border-red-800/50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {textResult.status === "clean" && <CheckCircle className="h-4 w-4" />}
+                          {textResult.status === "flagged" && <AlertTriangle className="h-4 w-4" />}
+                          {textResult.status === "blocked" && <AlertCircle className="h-4 w-4" />}
+                          <span className="font-medium capitalize">{textResult.status} Content</span>
+                          <span className="ml-auto text-xs">{Math.round(textResult.confidence * 100)}% confidence</span>
+                        </div>
+                        {textResult.reason && <p className="mt-1 text-sm">{textResult.reason}</p>}
+                      </div>
+                    </motion.div>
+                  )}
+                </motion.div>
 
-              {/* Image Analysis Result */}
-              {analysisComplete && imageResult && image && (
-                <div className="mt-2">
+                <motion.div variants={slideUp}>
                   <div
-                    className={`p-2 rounded-md text-sm ${
-                      imageResult.status === "clean"
-                        ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300"
-                        : imageResult.status === "flagged"
-                          ? "bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300"
-                          : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300"
+                    className={`relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors ${
+                      isDragging
+                        ? "border-blue-500 bg-blue-900/10"
+                        : "border-gray-700 hover:border-blue-500 dark:border-gray-700"
                     }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
                   >
-                    <div className="flex items-center gap-2">
-                      {imageResult.status === "clean" && <CheckCircle className="h-4 w-4" />}
-                      {imageResult.status === "flagged" && <AlertTriangle className="h-4 w-4" />}
-                      {imageResult.status === "blocked" && <AlertCircle className="h-4 w-4" />}
-                      <span className="font-medium capitalize">{imageResult.status} Image</span>
-                      <span className="ml-auto text-xs">{Math.round(imageResult.confidence * 100)}% confidence</span>
-                    </div>
-                    {imageResult.reason && <p className="mt-1 text-sm">{imageResult.reason}</p>}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept="image/*"
+                      className="hidden"
+                    />
+
+                    {image ? (
+                      <div className="relative h-full w-full">
+                        <div className={`relative ${shouldBlurImage() ? "overflow-hidden rounded-lg" : ""}`}>
+                          <Image
+                            src={image || "/placeholder.svg"}
+                            alt="Uploaded image"
+                            className={`mx-auto max-h-[300px] w-auto rounded-lg object-contain ${
+                              shouldBlurImage() ? "blur-md" : ""
+                            }`}
+                            width={400}
+                            height={300}
+                          />
+
+                          {/* Blocked content overlay */}
+                          {analysisComplete && imageResult?.status === "blocked" && (
+                            <motion.div
+                              className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-lg"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ duration: 0.3 }}
+                            >
+                              <div className="text-white text-center p-4">
+                                <AlertCircle className="h-8 w-8 mx-auto mb-2 text-red-400" />
+                                <p className="font-bold">Blocked Content</p>
+                                <p className="text-sm mt-1">
+                                  {imageResult.reason || "This image violates our content policy"}
+                                </p>
+                              </div>
+                            </motion.div>
+                          )}
+                        </div>
+
+                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute right-0 top-0 h-8 w-8 rounded-full bg-red-600 hover:bg-red-700"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              resetImage()
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </motion.div>
+                      </div>
+                    ) : (
+                      <>
+                        <ImageIcon className="mb-4 h-10 w-10 text-gray-500" />
+                        <p className="mb-2 text-sm font-medium text-gray-300">
+                          Drag and drop an image here, or click to browse
+                        </p>
+                        <p className="text-xs text-gray-500">Supports JPG, PNG, GIF up to 10MB</p>
+                      </>
+                    )}
                   </div>
-                </div>
-              )}
-            </div>
 
-            {pendingAnalysis && !analysisComplete && (
-              <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-950">
-                <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
-                <AlertTitle className="text-blue-700 dark:text-blue-300">Analyzing Content</AlertTitle>
-                <AlertDescription className="text-blue-600 dark:text-blue-400">
-                  Please wait while we analyze your content for policy compliance.
-                </AlertDescription>
-              </Alert>
-            )}
+                  {/* Image Analysis Result */}
+                  {analysisComplete && imageResult && image && (
+                    <motion.div
+                      className="mt-2"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <div
+                        className={`p-2 rounded-md text-sm ${
+                          imageResult.status === "clean"
+                            ? "bg-green-900/20 text-green-300 border border-green-800/50"
+                            : imageResult.status === "flagged"
+                              ? "bg-yellow-900/20 text-yellow-300 border border-yellow-800/50"
+                              : "bg-red-900/20 text-red-300 border border-red-800/50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {imageResult.status === "clean" && <CheckCircle className="h-4 w-4" />}
+                          {imageResult.status === "flagged" && <AlertTriangle className="h-4 w-4" />}
+                          {imageResult.status === "blocked" && <AlertCircle className="h-4 w-4" />}
+                          <span className="font-medium capitalize">{imageResult.status} Image</span>
+                          <span className="ml-auto text-xs">
+                            {Math.round(imageResult.confidence * 100)}% confidence
+                          </span>
+                        </div>
+                        {imageResult.reason && <p className="mt-1 text-sm">{imageResult.reason}</p>}
+                      </div>
+                    </motion.div>
+                  )}
+                </motion.div>
 
-            {status && analysisComplete && (
-              <div className="space-y-4">
-                {status === "clean" && (
-                  <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <AlertTitle className="text-green-700 dark:text-green-300">Content Ready to Post</AlertTitle>
-                    <AlertDescription className="text-green-600 dark:text-green-400">
-                      No cyberbullying indicators detected in your content.
-                    </AlertDescription>
-                  </Alert>
+                {pendingAnalysis && !analysisComplete && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Alert className="border-blue-800 bg-blue-900/20 text-blue-300">
+                      <Loader2 className="h-5 w-5 text-blue-400 animate-spin" />
+                      <AlertTitle className="text-blue-300">Analyzing Content</AlertTitle>
+                      <AlertDescription className="text-blue-400">
+                        Please wait while we analyze your content for policy compliance.
+                      </AlertDescription>
+                    </Alert>
+                  </motion.div>
                 )}
 
-                {status === "flagged" && (
-                  <Alert className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
-                    <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                    <AlertTitle className="text-yellow-700 dark:text-yellow-300">Content Flagged</AlertTitle>
-                    <AlertDescription className="text-yellow-600 dark:text-yellow-400">
-                      {textResult?.status === "flagged" && textResult.reason}
-                      {imageResult?.status === "flagged" && imageResult.reason}
-                      <p className="mt-2">Your post can still be submitted, but it may be reviewed by moderators.</p>
-                    </AlertDescription>
-                  </Alert>
-                )}
+                {status && analysisComplete && (
+                  <motion.div
+                    className="space-y-4"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {status === "clean" && (
+                      <Alert className="border-green-800 bg-green-900/20 text-green-300">
+                        <CheckCircle className="h-5 w-5 text-green-400" />
+                        <AlertTitle className="text-green-300">Content Ready to Post</AlertTitle>
+                        <AlertDescription className="text-green-400">
+                          No cyberbullying indicators detected in your content.
+                        </AlertDescription>
+                      </Alert>
+                    )}
 
-                {status === "blocked" && (
-                  <Alert className="border-red-500 bg-red-50 dark:bg-red-950">
-                    <AlertCircle className="h-5 w-5 text-red-500" />
-                    <AlertTitle className="text-red-700 dark:text-red-300">Content Blocked</AlertTitle>
-                    <AlertDescription className="text-red-600 dark:text-red-400">
-                      {textResult?.status === "blocked" && (
-                        <p className="mb-2">{textResult.reason || "Your text contains prohibited content."}</p>
-                      )}
-                      {imageResult?.status === "blocked" && (
-                        <p className="mb-2">{imageResult.reason || "Your image contains prohibited content."}</p>
-                      )}
-                      <p className="mt-2 font-medium">Please revise your content before posting.</p>
-                    </AlertDescription>
-                  </Alert>
+                    {status === "flagged" && (
+                      <Alert className="border-yellow-800 bg-yellow-900/20 text-yellow-300">
+                        <AlertTriangle className="h-5 w-5 text-yellow-400" />
+                        <AlertTitle className="text-yellow-300">Content Flagged</AlertTitle>
+                        <AlertDescription className="text-yellow-400">
+                          {textResult?.status === "flagged" && textResult.reason}
+                          {imageResult?.status === "flagged" && imageResult.reason}
+                          <p className="mt-2">
+                            Your post can still be submitted, but it may be reviewed by moderators.
+                          </p>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {status === "blocked" && (
+                      <Alert className="border-red-800 bg-red-900/20 text-red-300">
+                        <AlertCircle className="h-5 w-5 text-red-400" />
+                        <AlertTitle className="text-red-300">Content Blocked</AlertTitle>
+                        <AlertDescription className="text-red-400">
+                          {textResult?.status === "blocked" && (
+                            <p className="mb-2">{textResult.reason || "Your text contains prohibited content."}</p>
+                          )}
+                          {imageResult?.status === "blocked" && (
+                            <p className="mb-2">{imageResult.reason || "Your image contains prohibited content."}</p>
+                          )}
+                          <p className="mt-2 font-medium">Please revise your content before posting.</p>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </motion.div>
                 )}
-              </div>
-            )}
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button variant="outline" onClick={() => router.back()}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={!canSubmit() || isAnalyzing || isSubmitting || pendingAnalysis}
-              className="min-w-[120px]"
-            >
-              {isAnalyzing || pendingAnalysis ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Analyzing...
-                </>
-              ) : isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Posting...
-                </>
-              ) : (
-                "Post"
-              )}
-            </Button>
-          </CardFooter>
-        </Card>
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.back()}
+                    className="border-gray-700 text-gray-300 hover:bg-gray-800"
+                  >
+                    Cancel
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={!canSubmit() || isAnalyzing || isSubmitting || pendingAnalysis}
+                    className="min-w-[120px] bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-800 disabled:text-gray-500"
+                  >
+                    {isAnalyzing || pendingAnalysis ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Posting...
+                      </>
+                    ) : (
+                      "Post"
+                    )}
+                  </Button>
+                </motion.div>
+              </CardFooter>
+            </Card>
+          </motion.div>
+        </div>
       </div>
     </div>
   )

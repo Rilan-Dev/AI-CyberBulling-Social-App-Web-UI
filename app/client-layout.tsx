@@ -1,41 +1,96 @@
 "use client"
 
 import type React from "react"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { SiteHeader } from "@/components/site-header"
-import { PostProvider } from "@/context/post-context"
-import { AuthProvider } from "@/context/auth-context"
+
+import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
-import { isPublicRoute } from "@/config/routes"
+import { Inter } from "next/font/google"
+import { ThemeProvider } from "@/components/theme-provider"
+import { AuthProvider } from "@/context/auth-context"
+import { ProtectedRoute } from "@/components/protected-route"
+import { SiteHeader } from "@/components/site-header"
 import { Toaster } from "@/components/ui/toaster"
+import { shouldShowNavbar } from "@/config/routes"
+import { motion, AnimatePresence } from "framer-motion"
+
+import "@/app/globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
 
-export default function ClientLayout({
-  children,
-}: {
+interface ClientLayoutProps {
   children: React.ReactNode
-}) {
-  const pathname = usePathname()
+}
 
-  // Check if current path is a public route (login, register, etc.)
-  const isAuthPage = isPublicRoute(pathname)
+export default function ClientLayout({ children }: ClientLayoutProps) {
+  const pathname = usePathname()
+  const [showNavbar, setShowNavbar] = useState(false)
+  const [pageKey, setPageKey] = useState("")
+
+  useEffect(() => {
+    setShowNavbar(shouldShowNavbar(pathname || ""))
+    setPageKey(pathname || "")
+  }, [pathname])
+
+  // Special case for welcome page - don't wrap in AuthProvider or ProtectedRoute
+  if (pathname === "/welcome") {
+    return (
+      <html lang="en" suppressHydrationWarning>
+        <body className={inter.className}>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            {children}
+            <Toaster />
+          </ThemeProvider>
+        </body>
+      </html>
+    )
+  }
+
+  // Special cases for login and register pages - wrap in AuthProvider but not ProtectedRoute
+  if (pathname === "/login" || pathname === "/register" || pathname === "/forgot-password") {
+    return (
+      <html lang="en" suppressHydrationWarning>
+        <body className={`${inter.className} bg-black`}>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <AuthProvider>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={pageKey}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {children}
+                </motion.div>
+              </AnimatePresence>
+              <Toaster />
+            </AuthProvider>
+          </ThemeProvider>
+        </body>
+      </html>
+    )
+  }
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.className} bg-black`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthProvider>
-            <PostProvider>
-              <div className="relative min-h-screen flex flex-col">
-                {/* Only render SiteHeader if not on public auth pages */}
-                {!isAuthPage && <SiteHeader />}
-                <div className="flex-1">{children}</div>
-              </div>
-              <Toaster />
-            </PostProvider>
+            <ProtectedRoute>
+              {showNavbar && <SiteHeader />}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={pageKey}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {children}
+                </motion.div>
+              </AnimatePresence>
+            </ProtectedRoute>
+            <Toaster />
           </AuthProvider>
         </ThemeProvider>
       </body>

@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useRef } from "react"
+import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,10 +12,31 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ImageIcon } from "lucide-react"
+import { ImageIcon, Loader2, CheckCircle } from "lucide-react"
 import { useAuth } from "@/context/auth-context"
 import { toast } from "@/components/ui/use-toast"
 import { userService } from "@/services/user.service"
+
+// Animation variants
+const fadeIn = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.6 } },
+}
+
+const slideUp = {
+  hidden: { y: 20, opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { duration: 0.5 } },
+}
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+}
 
 export default function SettingsForm() {
   const { userProfile } = useAuth()
@@ -48,6 +70,7 @@ export default function SettingsForm() {
   })
 
   const [isSaving, setIsSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
 
   const [uploadingImage, setUploadingImage] = useState(false)
   const [profileImage, setProfileImage] = useState<string | null>(
@@ -70,21 +93,31 @@ export default function SettingsForm() {
 
   const handleSaveProfile = async () => {
     setIsSaving(true)
+    setSaveSuccess(false)
 
     try {
-      // In a real app, you would call your API
-      // await fetch('/api/user/profile', {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(profileForm)
-      // })
-
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000))
-      alert("Profile updated successfully!")
+
+      toast({
+        title: "Profile Updated",
+        description: "Your profile information has been updated successfully.",
+        variant: "default",
+      })
+
+      setSaveSuccess(true)
+
+      // Reset success state after 2 seconds
+      setTimeout(() => {
+        setSaveSuccess(false)
+      }, 2000)
     } catch (error) {
       console.error("Error updating profile:", error)
-      alert("Failed to update profile")
+      toast({
+        title: "Error",
+        description: "Failed to update profile",
+        variant: "destructive",
+      })
     } finally {
       setIsSaving(false)
     }
@@ -142,259 +175,432 @@ export default function SettingsForm() {
       : userProfile?.user.username || ""
 
   return (
-    <div className="container py-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Settings</h1>
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black">
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,100,255,0.1),transparent_70%)]"></div>
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        ></div>
+      </div>
 
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="privacy">Privacy</TabsTrigger>
-          </TabsList>
+      <div className="container py-8 relative z-10">
+        <div className="max-w-4xl mx-auto">
+          <motion.h1
+            className="text-3xl font-bold mb-6 text-white"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            Settings
+          </motion.h1>
 
-          <TabsContent value="profile">
-            <Card>
-              <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
-                <CardDescription>
-                  Update your profile information and how others see you on the platform.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
-                  <div className="relative">
-                    <Avatar className="h-24 w-24 border-4 border-background">
-                      <AvatarImage src={profileImage || avatarUrl} alt={displayName} />
-                      <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <label htmlFor="profile-image-upload" className="absolute bottom-0 right-0 cursor-pointer">
-                      <input
-                        id="profile-image-upload"
-                        type="file"
-                        ref={fileInputRef}
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleProfileImageChange}
-                        disabled={uploadingImage}
-                      />
-                      <div className="rounded-full bg-primary text-primary-foreground p-2 shadow-sm hover:bg-primary/90 transition-colors">
-                        {uploadingImage ? (
-                          <span className="animate-spin block h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                        ) : (
-                          <ImageIcon className="h-4 w-4" />
-                        )}
+          <Tabs defaultValue="profile" className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              <TabsList className="grid w-full max-w-md grid-cols-3 bg-gray-800/50 border border-gray-700">
+                <TabsTrigger
+                  value="profile"
+                  className="data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-300 text-gray-300"
+                >
+                  Profile
+                </TabsTrigger>
+                <TabsTrigger
+                  value="notifications"
+                  className="data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-300 text-gray-300"
+                >
+                  Notifications
+                </TabsTrigger>
+                <TabsTrigger
+                  value="privacy"
+                  className="data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-300 text-gray-300"
+                >
+                  Privacy
+                </TabsTrigger>
+              </TabsList>
+            </motion.div>
+
+            <TabsContent value="profile">
+              <motion.div variants={fadeIn} initial="hidden" animate="visible">
+                <Card className="bg-gray-900/70 backdrop-blur-lg border border-gray-800 text-gray-200">
+                  <CardHeader>
+                    <CardTitle className="text-white">Profile Information</CardTitle>
+                    <CardDescription className="text-gray-400">
+                      Update your profile information and how others see you on the platform.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <motion.div
+                      className="flex flex-col sm:flex-row gap-6 items-center sm:items-start"
+                      variants={slideUp}
+                    >
+                      <div className="relative">
+                        <motion.div whileHover={{ scale: 1.05 }} transition={{ type: "spring", stiffness: 300 }}>
+                          <Avatar className="h-24 w-24 border-4 border-blue-500/20 ring-2 ring-blue-500/10">
+                            <AvatarImage src={profileImage || avatarUrl} alt={displayName} />
+                            <AvatarFallback className="bg-blue-900/30 text-blue-200">
+                              {displayName.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </motion.div>
+                        <motion.label
+                          htmlFor="profile-image-upload"
+                          className="absolute bottom-0 right-0 cursor-pointer"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <input
+                            id="profile-image-upload"
+                            type="file"
+                            ref={fileInputRef}
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleProfileImageChange}
+                            disabled={uploadingImage}
+                          />
+                          <div className="rounded-full bg-blue-600 text-white p-2 shadow-lg hover:bg-blue-700 transition-colors">
+                            {uploadingImage ? (
+                              <span className="animate-spin block h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                            ) : (
+                              <ImageIcon className="h-4 w-4" />
+                            )}
+                          </div>
+                        </motion.label>
                       </div>
-                    </label>
-                  </div>
 
-                  <div className="flex-1 space-y-1 text-center sm:text-left">
-                    <h3 className="font-medium">{profileForm.name}</h3>
-                    <p className="text-sm text-muted-foreground">@{profileForm.username}</p>
-                    <div className="mt-2 space-y-2">
-                      <p className="text-sm text-muted-foreground">
-                        Upload a new profile picture or change your profile details below.
-                      </p>
+                      <div className="flex-1 space-y-1 text-center sm:text-left">
+                        <h3 className="font-medium text-white">{profileForm.name}</h3>
+                        <p className="text-sm text-blue-300">@{profileForm.username}</p>
+                        <div className="mt-2 space-y-2">
+                          <p className="text-sm text-gray-400">
+                            Upload a new profile picture or change your profile details below.
+                          </p>
+                          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={uploadingImage}
+                              className="border-blue-500 text-blue-300 hover:bg-blue-900/20"
+                            >
+                              {uploadingImage ? "Uploading..." : "Change Avatar"}
+                            </Button>
+                          </motion.div>
+                        </div>
+                      </div>
+                    </motion.div>
+
+                    <motion.div
+                      className="grid gap-4 sm:grid-cols-2"
+                      variants={staggerContainer}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      <motion.div className="space-y-2" variants={slideUp}>
+                        <Label htmlFor="name" className="text-gray-300">
+                          Name
+                        </Label>
+                        <Input
+                          id="name"
+                          name="name"
+                          value={profileForm.name}
+                          onChange={handleProfileChange}
+                          className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </motion.div>
+
+                      <motion.div className="space-y-2" variants={slideUp}>
+                        <Label htmlFor="username" className="text-gray-300">
+                          Username
+                        </Label>
+                        <Input
+                          id="username"
+                          name="username"
+                          value={profileForm.username}
+                          onChange={handleProfileChange}
+                          className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </motion.div>
+                    </motion.div>
+
+                    <motion.div className="space-y-2" variants={slideUp}>
+                      <Label htmlFor="bio" className="text-gray-300">
+                        Bio
+                      </Label>
+                      <Textarea
+                        id="bio"
+                        name="bio"
+                        value={profileForm.bio}
+                        onChange={handleProfileChange}
+                        rows={4}
+                        className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </motion.div>
+
+                    <motion.div
+                      className="grid gap-4 sm:grid-cols-2"
+                      variants={staggerContainer}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      <motion.div className="space-y-2" variants={slideUp}>
+                        <Label htmlFor="website" className="text-gray-300">
+                          Website
+                        </Label>
+                        <Input
+                          id="website"
+                          name="website"
+                          value={profileForm.website}
+                          onChange={handleProfileChange}
+                          className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </motion.div>
+
+                      <motion.div className="space-y-2" variants={slideUp}>
+                        <Label htmlFor="location" className="text-gray-300">
+                          Location
+                        </Label>
+                        <Input
+                          id="location"
+                          name="location"
+                          value={profileForm.location}
+                          onChange={handleProfileChange}
+                          className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </motion.div>
+                    </motion.div>
+
+                    <motion.div className="space-y-2" variants={slideUp}>
+                      <Label htmlFor="email" className="text-gray-300">
+                        Email
+                      </Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={profileForm.email}
+                        onChange={handleProfileChange}
+                        className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </motion.div>
+                  </CardContent>
+                  <CardFooter>
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploadingImage}
+                        onClick={handleSaveProfile}
+                        disabled={isSaving}
+                        className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
                       >
-                        {uploadingImage ? "Uploading..." : "Change Avatar"}
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span>Saving...</span>
+                          </>
+                        ) : saveSuccess ? (
+                          <>
+                            <CheckCircle className="h-4 w-4" />
+                            <span>Saved!</span>
+                          </>
+                        ) : (
+                          "Save Changes"
+                        )}
                       </Button>
-                    </div>
-                  </div>
-                </div>
+                    </motion.div>
+                  </CardFooter>
+                </Card>
+              </motion.div>
+            </TabsContent>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Name</Label>
-                    <Input id="name" name="name" value={profileForm.name} onChange={handleProfileChange} />
-                  </div>
+            <TabsContent value="notifications">
+              <motion.div variants={fadeIn} initial="hidden" animate="visible">
+                <Card className="bg-gray-900/70 backdrop-blur-lg border border-gray-800 text-gray-200">
+                  <CardHeader>
+                    <CardTitle className="text-white">Notification Preferences</CardTitle>
+                    <CardDescription className="text-gray-400">
+                      Manage how and when you receive notifications.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <motion.div className="space-y-4" variants={staggerContainer} initial="hidden" animate="visible">
+                      <motion.div className="flex items-center justify-between" variants={slideUp}>
+                        <div>
+                          <h4 className="font-medium text-white">Likes</h4>
+                          <p className="text-sm text-gray-400">Notify when someone likes your post</p>
+                        </div>
+                        <Switch
+                          checked={notificationSettings.likes}
+                          onCheckedChange={(checked) => handleNotificationChange("likes", checked)}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                      </motion.div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="username">Username</Label>
-                    <Input id="username" name="username" value={profileForm.username} onChange={handleProfileChange} />
-                  </div>
-                </div>
+                      <motion.div className="flex items-center justify-between" variants={slideUp}>
+                        <div>
+                          <h4 className="font-medium text-white">Comments</h4>
+                          <p className="text-sm text-gray-400">Notify when someone comments on your post</p>
+                        </div>
+                        <Switch
+                          checked={notificationSettings.comments}
+                          onCheckedChange={(checked) => handleNotificationChange("comments", checked)}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                      </motion.div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
-                  <Textarea id="bio" name="bio" value={profileForm.bio} onChange={handleProfileChange} rows={4} />
-                </div>
+                      <motion.div className="flex items-center justify-between" variants={slideUp}>
+                        <div>
+                          <h4 className="font-medium text-white">Follows</h4>
+                          <p className="text-sm text-gray-400">Notify when someone follows you</p>
+                        </div>
+                        <Switch
+                          checked={notificationSettings.follows}
+                          onCheckedChange={(checked) => handleNotificationChange("follows", checked)}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                      </motion.div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="website">Website</Label>
-                    <Input id="website" name="website" value={profileForm.website} onChange={handleProfileChange} />
-                  </div>
+                      <motion.div className="flex items-center justify-between" variants={slideUp}>
+                        <div>
+                          <h4 className="font-medium text-white">Mentions</h4>
+                          <p className="text-sm text-gray-400">Notify when someone mentions you</p>
+                        </div>
+                        <Switch
+                          checked={notificationSettings.mentions}
+                          onCheckedChange={(checked) => handleNotificationChange("mentions", checked)}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                      </motion.div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="location">Location</Label>
-                    <Input id="location" name="location" value={profileForm.location} onChange={handleProfileChange} />
-                  </div>
-                </div>
+                      <motion.div className="flex items-center justify-between" variants={slideUp}>
+                        <div>
+                          <h4 className="font-medium text-white">Direct Messages</h4>
+                          <p className="text-sm text-gray-400">Notify when you receive a direct message</p>
+                        </div>
+                        <Switch
+                          checked={notificationSettings.directMessages}
+                          onCheckedChange={(checked) => handleNotificationChange("directMessages", checked)}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                      </motion.div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={profileForm.email}
-                    onChange={handleProfileChange}
-                  />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button onClick={handleSaveProfile} disabled={isSaving}>
-                  {isSaving ? "Saving..." : "Save Changes"}
-                </Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
+                      <motion.div className="flex items-center justify-between" variants={slideUp}>
+                        <div>
+                          <h4 className="font-medium text-white">Email Notifications</h4>
+                          <p className="text-sm text-gray-400">Receive notifications via email</p>
+                        </div>
+                        <Switch
+                          checked={notificationSettings.emailNotifications}
+                          onCheckedChange={(checked) => handleNotificationChange("emailNotifications", checked)}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                      </motion.div>
+                    </motion.div>
+                  </CardContent>
+                  <CardFooter>
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Button
+                        onClick={() => {
+                          toast({
+                            title: "Notification Settings Saved",
+                            description: "Your notification preferences have been updated.",
+                          })
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        Save Preferences
+                      </Button>
+                    </motion.div>
+                  </CardFooter>
+                </Card>
+              </motion.div>
+            </TabsContent>
 
-          <TabsContent value="notifications">
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Preferences</CardTitle>
-                <CardDescription>Manage how and when you receive notifications.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Likes</h4>
-                      <p className="text-sm text-muted-foreground">Notify when someone likes your post</p>
-                    </div>
-                    <Switch
-                      checked={notificationSettings.likes}
-                      onCheckedChange={(checked) => handleNotificationChange("likes", checked)}
-                    />
-                  </div>
+            <TabsContent value="privacy">
+              <motion.div variants={fadeIn} initial="hidden" animate="visible">
+                <Card className="bg-gray-900/70 backdrop-blur-lg border border-gray-800 text-gray-200">
+                  <CardHeader>
+                    <CardTitle className="text-white">Privacy Settings</CardTitle>
+                    <CardDescription className="text-gray-400">
+                      Control your privacy and security preferences.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <motion.div className="space-y-4" variants={staggerContainer} initial="hidden" animate="visible">
+                      <motion.div className="flex items-center justify-between" variants={slideUp}>
+                        <div>
+                          <h4 className="font-medium text-white">Private Account</h4>
+                          <p className="text-sm text-gray-400">Only approved followers can see your posts</p>
+                        </div>
+                        <Switch
+                          checked={privacySettings.privateAccount}
+                          onCheckedChange={(checked) => handlePrivacyChange("privateAccount", checked)}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                      </motion.div>
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Comments</h4>
-                      <p className="text-sm text-muted-foreground">Notify when someone comments on your post</p>
-                    </div>
-                    <Switch
-                      checked={notificationSettings.comments}
-                      onCheckedChange={(checked) => handleNotificationChange("comments", checked)}
-                    />
-                  </div>
+                      <motion.div className="flex items-center justify-between" variants={slideUp}>
+                        <div>
+                          <h4 className="font-medium text-white">Activity Status</h4>
+                          <p className="text-sm text-gray-400">Show when you're active on the platform</p>
+                        </div>
+                        <Switch
+                          checked={privacySettings.showActivity}
+                          onCheckedChange={(checked) => handlePrivacyChange("showActivity", checked)}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                      </motion.div>
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Follows</h4>
-                      <p className="text-sm text-muted-foreground">Notify when someone follows you</p>
-                    </div>
-                    <Switch
-                      checked={notificationSettings.follows}
-                      onCheckedChange={(checked) => handleNotificationChange("follows", checked)}
-                    />
-                  </div>
+                      <motion.div className="flex items-center justify-between" variants={slideUp}>
+                        <div>
+                          <h4 className="font-medium text-white">Allow Tagging</h4>
+                          <p className="text-sm text-gray-400">Allow others to tag you in their posts</p>
+                        </div>
+                        <Switch
+                          checked={privacySettings.allowTagging}
+                          onCheckedChange={(checked) => handlePrivacyChange("allowTagging", checked)}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                      </motion.div>
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Mentions</h4>
-                      <p className="text-sm text-muted-foreground">Notify when someone mentions you</p>
-                    </div>
-                    <Switch
-                      checked={notificationSettings.mentions}
-                      onCheckedChange={(checked) => handleNotificationChange("mentions", checked)}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Direct Messages</h4>
-                      <p className="text-sm text-muted-foreground">Notify when you receive a direct message</p>
-                    </div>
-                    <Switch
-                      checked={notificationSettings.directMessages}
-                      onCheckedChange={(checked) => handleNotificationChange("directMessages", checked)}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Email Notifications</h4>
-                      <p className="text-sm text-muted-foreground">Receive notifications via email</p>
-                    </div>
-                    <Switch
-                      checked={notificationSettings.emailNotifications}
-                      onCheckedChange={(checked) => handleNotificationChange("emailNotifications", checked)}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button onClick={() => alert("Notification settings saved!")}>Save Preferences</Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="privacy">
-            <Card>
-              <CardHeader>
-                <CardTitle>Privacy Settings</CardTitle>
-                <CardDescription>Control your privacy and security preferences.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Private Account</h4>
-                      <p className="text-sm text-muted-foreground">Only approved followers can see your posts</p>
-                    </div>
-                    <Switch
-                      checked={privacySettings.privateAccount}
-                      onCheckedChange={(checked) => handlePrivacyChange("privateAccount", checked)}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Activity Status</h4>
-                      <p className="text-sm text-muted-foreground">Show when you're active on the platform</p>
-                    </div>
-                    <Switch
-                      checked={privacySettings.showActivity}
-                      onCheckedChange={(checked) => handlePrivacyChange("showActivity", checked)}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Allow Tagging</h4>
-                      <p className="text-sm text-muted-foreground">Allow others to tag you in their posts</p>
-                    </div>
-                    <Switch
-                      checked={privacySettings.allowTagging}
-                      onCheckedChange={(checked) => handlePrivacyChange("allowTagging", checked)}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Allow Mentions</h4>
-                      <p className="text-sm text-muted-foreground">Allow others to mention you in comments</p>
-                    </div>
-                    <Switch
-                      checked={privacySettings.allowMentions}
-                      onCheckedChange={(checked) => handlePrivacyChange("allowMentions", checked)}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button onClick={() => alert("Privacy settings saved!")}>Save Settings</Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                      <motion.div className="flex items-center justify-between" variants={slideUp}>
+                        <div>
+                          <h4 className="font-medium text-white">Allow Mentions</h4>
+                          <p className="text-sm text-gray-400">Allow others to mention you in comments</p>
+                        </div>
+                        <Switch
+                          checked={privacySettings.allowMentions}
+                          onCheckedChange={(checked) => handlePrivacyChange("allowMentions", checked)}
+                          className="data-[state=checked]:bg-blue-600"
+                        />
+                      </motion.div>
+                    </motion.div>
+                  </CardContent>
+                  <CardFooter>
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Button
+                        onClick={() => {
+                          toast({
+                            title: "Privacy Settings Saved",
+                            description: "Your privacy settings have been updated.",
+                          })
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        Save Settings
+                      </Button>
+                    </motion.div>
+                  </CardFooter>
+                </Card>
+              </motion.div>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
   )

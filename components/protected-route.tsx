@@ -7,6 +7,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { useAuth } from "@/context/auth-context"
 import { Loader2 } from "lucide-react"
 import { isProtectedRoute } from "@/config/routes"
+import { PostProvider } from "@/context/post-context"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -36,7 +37,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   // If authenticated or not a protected route, render children
   if (isAuthenticated || !isProtectedRoute(pathname)) {
-    return <>{children}</>
+    return <PostProvider>{children}</PostProvider>
   }
 
   // Return null while redirecting
