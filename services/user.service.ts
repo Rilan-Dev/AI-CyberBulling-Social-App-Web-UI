@@ -73,9 +73,10 @@ export const userService = {
 
   // Update user profile
   updateProfile: async (data: FormData) => {
+    console.log("data in updateProfile", data);
     const response = await apiService.update<UserModel>({
       endpoint: API_PATHS.CURRENT_USER,
-      queryParams: data,
+      body: data,
       headers: {
         "Content-Type": "multipart/form-data",
       },

@@ -12,6 +12,7 @@ interface PostContextType {
   error: string | null
   fetchPosts: () => Promise<void>
   addPost: (postData: FormData) => Promise<Post | null>
+  deletePost: (id: number) => Promise<void>
   likePost: (postId: number) => Promise<void>
   unlikePost: (postId: number) => Promise<void>
   addComment: (postId: number, content: string) => Promise<void>
@@ -65,18 +66,19 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newPost = await postService.createPost(formData)
 
       if (newPost) {
-        // Ensure posts is always an array before updating
-        setPosts((prevPosts) => {
-          if (Array.isArray(prevPosts)) {
-            return [newPost, ...prevPosts]
-          } else {
-            console.warn("prevPosts is not an array:", prevPosts)
-            return [newPost]
-          }
-        })
-        return newPost
+        // // Ensure posts is always an array before updating
+        // setPosts((prevPosts) => {
+        //   if (Array.isArray(prevPosts)) {
+        //     return [newPost, ...prevPosts]
+        //   } else {
+        //     console.warn("prevPosts is not an array:", prevPosts)
+        //     return [newPost]
+        //   }
+        // })
+        // return newPost
+        fetchPosts();
       }
-      return null
+      return newPost ?? null
     } catch (error) {
       console.error("Error adding post:", error)
       toast({
@@ -85,6 +87,35 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         variant: "destructive",
       })
       return null
+    }
+  }
+
+  const deletePost = async (id: number) => {
+    try {
+      
+      // Make sure we're using FormData
+      const deletePost = await postService.deletePost(id)
+
+      if (deletePost) {
+        // // Ensure posts is always an array before updating
+        // setPosts((prevPosts) => {
+        //   if (Array.isArray(prevPosts)) {
+        //     return [newPost, ...prevPosts]
+        //   } else {
+        //     console.warn("prevPosts is not an array:", prevPosts)
+        //     return [newPost]
+        //   }
+        // })
+        // return newPost
+        fetchPosts();
+      }
+    } catch (error) {
+      console.error("Error deleting post:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete post",
+        variant: "destructive",
+      })
     }
   }
 
@@ -201,6 +232,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         error,
         fetchPosts,
         addPost,
+        deletePost,
         likePost,
         unlikePost,
         addComment,

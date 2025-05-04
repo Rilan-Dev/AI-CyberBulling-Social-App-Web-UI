@@ -358,8 +358,8 @@ export class APIService extends BaseApiService {
         ...(params.headers || {}),
       }
     }
-
-    const response = await this.fetchApi<T>(`${params.endpoint}/${params.queryParams?.id}`, {
+    const url = params.queryParams?.id !== undefined ? `${params.endpoint}/${params.queryParams.id}` : params.endpoint
+    const response = await this.fetchApi<T>(url, {
       method: "PUT",
       body: body,
       headers: headers,

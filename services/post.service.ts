@@ -35,7 +35,7 @@ export const postService = {
   // Get a specific post
   getPost: async (id: number) => {
     const response = await apiService.getData<Post>({
-      endpoint: API_PATHS.POST_DETAIL(id),
+      endpoint: API_PATHS.POST_EDIT(id),
     })
     return response.data
   },
@@ -61,7 +61,7 @@ export const postService = {
   // Update a post
   updatePost: async (id: number, data: FormData) => {
     const response = await apiService.create<Post>({
-      endpoint: API_PATHS.POST_DETAIL(id),
+      endpoint: API_PATHS.POST_EDIT(id),
       body: data,
       headers: {
         "Content-Type": "multipart/form-data",
@@ -73,7 +73,7 @@ export const postService = {
   // Delete a post
   deletePost: async (id: number) => {
     const response = await apiService.deleteItem<void>({
-      endpoint: API_PATHS.POST_DETAIL(id),
+      endpoint: API_PATHS.POST_DELETE,
       queryParams: { id },
     })
     return response

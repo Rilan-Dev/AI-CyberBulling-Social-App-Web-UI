@@ -18,7 +18,7 @@ export default function RegisterPage() {
     username: "",
     email: "",
     password: "",
-    confirmPassword: "",
+    password2: "",
     first_name: "",
     last_name: "",
   })
@@ -33,7 +33,7 @@ export default function RegisterPage() {
   }
 
   const validateForm = () => {
-    if (formData.password !== formData.confirmPassword) {
+    if (formData.password !== formData.password2) {
       setPasswordError("Passwords do not match")
       return false
     }
@@ -51,7 +51,7 @@ export default function RegisterPage() {
 
     if (!validateForm()) return
 
-    const { confirmPassword, ...userData } = formData
+    const { ...userData } = formData
     await register(userData)
   }
 
@@ -146,13 +146,13 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="password2">Confirm Password</Label>
                 <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
+                  id="password2"
+                  name="password2"
                   type="password"
                   placeholder="Confirm your password"
-                  value={formData.confirmPassword}
+                  value={formData.password2}
                   onChange={handleChange}
                   required
                 />

@@ -9,6 +9,7 @@ import { PostProvider } from "@/context/post-context"
 import { AuthProvider } from "@/context/auth-context"
 import { usePathname } from "next/navigation"
 import { isPublicRoute } from "@/config/routes"
+import { Toaster } from "@/components/ui/toaster"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -33,6 +34,7 @@ export default function ClientLayout({
                 {!isAuthPage && <SiteHeader />}
                 <div className="flex-1">{children}</div>
               </div>
+              <Toaster />
             </PostProvider>
           </AuthProvider>
         </ThemeProvider>

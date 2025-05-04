@@ -34,6 +34,7 @@ import type { UserModel } from "@/Model/users.model"
 import type { Post } from "@/Model/post.model"
 import { userService } from "@/services/user.service"
 import { toast } from "@/components/ui/use-toast"
+import { usePosts } from "@/context/post-context"
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -47,6 +48,7 @@ export default function ProfilePage() {
   const [followers, setFollowers] = useState<number>(0)
   const [following, setFollowing] = useState<number>(0)
   const [isCurrentUser, setIsCurrentUser] = useState(false)
+  const { refreshPosts } = usePosts()
 
   // Check if this is the current user's profile
   useEffect(() => {
@@ -129,7 +131,7 @@ export default function ProfilePage() {
     if (username) {
       fetchUserPosts()
     }
-  }, [username])
+  }, [username, refreshPosts]) // Add refreshPosts to dependencies to refresh when posts change
 
   const handleFollow = async () => {
     try {
@@ -204,16 +206,27 @@ export default function ProfilePage() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    const formData = new FormData()
-    formData.append("profile_picture", file)
-
     try {
+      // Show loading toast
+      toast({
+        title: "Uploading...",
+        description: "Your profile picture is being updated",
+      })
+
+      const formData = new FormData()
+      formData.append("profile_picture", file)
+
       const updatedProfile = await userService.updateProfile(formData)
       setProfileData(updatedProfile || null)
+
       toast({
         title: "Success",
         description: "Profile picture updated successfully",
+        variant: "default",
       })
+
+      // Force refresh to show the updated image
+      router.refresh()
     } catch (error) {
       console.error("Error updating profile picture:", error)
       toast({
@@ -259,7 +272,7 @@ export default function ProfilePage() {
                 <Avatar className="h-24 w-24 border-4 border-background">
                   {profileData?.profile_picture ? (
                     <AvatarImage
-                      src={`${process.env.NEXT_PUBLIC_API_URL}${profileData.profile_picture}`}
+                      src={profileData.profile_picture || "/placeholder.svg"}
                       alt={`${profileData.user.firstName} ${profileData.user.lastName}`}
                     />
                   ) : (
@@ -270,7 +283,7 @@ export default function ProfilePage() {
                   )}
                 </Avatar>
                 {isCurrentUser && (
-                  <label htmlFor="profile-picture-upload">
+                  <label htmlFor="profile-picture-upload" className="absolute bottom-0 right-0 cursor-pointer">
                     <input
                       id="profile-picture-upload"
                       type="file"
@@ -278,14 +291,9 @@ export default function ProfilePage() {
                       className="hidden"
                       onChange={handleProfilePictureUpdate}
                     />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="absolute bottom-0 right-0 rounded-full bg-background h-8 w-8 cursor-pointer"
-                      type="button"
-                    >
+                    <div className="rounded-full bg-primary text-primary-foreground p-2 shadow-sm hover:bg-primary/90 transition-colors">
                       <ImageIcon className="h-4 w-4" />
-                    </Button>
+                    </div>
                   </label>
                 )}
               </div>
@@ -450,13 +458,13 @@ export default function ProfilePage() {
               viewMode === "grid" ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {userPosts.map((post) => (
-                    <ProfilePostCard key={post.id} post={post} />
+                    <ProfilePostCard key={post.id} post={post} isOwner={isCurrentUser} />
                   ))}
                 </div>
               ) : (
                 <div className="space-y-6">
                   {userPosts.map((post) => (
-                    <PostCard key={post.id} post={post} />
+                    <PostCard key={post.id} post={post} isOwner={isCurrentUser} />
                   ))}
                 </div>
               )
@@ -491,7 +499,7 @@ export default function ProfilePage() {
                 {userPosts
                   .filter((post) => post.image)
                   .map((post) => (
-                    <ProfilePostCard key={post.id} post={post} />
+                    <ProfilePostCard key={post.id} post={post} isOwner={isCurrentUser} />
                   ))}
               </div>
             ) : (

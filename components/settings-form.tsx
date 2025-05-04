@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,12 +13,17 @@ import { Switch } from "@/components/ui/switch"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ImageIcon } from "lucide-react"
 import { useAuth } from "@/context/auth-context"
+import { toast } from "@/components/ui/use-toast"
+import { userService } from "@/services/user.service"
 
 export default function SettingsForm() {
   const { userProfile } = useAuth()
 
   const [profileForm, setProfileForm] = useState({
-    name: userProfile?.user.firstName && userProfile?.user.lastName ? `${userProfile.user.firstName} ${userProfile.user.lastName}` : userProfile?.user.username || "",
+    name:
+      userProfile?.user.firstName && userProfile?.user.lastName
+        ? `${userProfile.user.firstName} ${userProfile.user.lastName}`
+        : userProfile?.user.username || "",
     username: userProfile?.user.username || "",
     bio: "This is a sample bio for the user profile. Here you can write about yourself and share your interests with others.",
     website: "https://example.com",
@@ -43,6 +48,12 @@ export default function SettingsForm() {
   })
 
   const [isSaving, setIsSaving] = useState(false)
+
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [profileImage, setProfileImage] = useState<string | null>(
+    userProfile?.profile_picture || "/placeholder.svg?height=40&width=40",
+  )
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -79,8 +90,56 @@ export default function SettingsForm() {
     }
   }
 
+  const handleProfileImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      setUploadingImage(true)
+
+      // Show loading toast
+      toast({
+        title: "Uploading...",
+        description: "Your profile picture is being updated",
+      })
+
+      // Create a preview
+      const reader = new FileReader()
+      reader.onload = () => {
+        setProfileImage(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+
+      // Upload to server
+      const formData = new FormData()
+      formData.append("profile_picture", file)
+
+      await userService.updateProfile(formData)
+
+      toast({
+        title: "Success",
+        description: "Profile picture updated successfully",
+      })
+    } catch (error) {
+      console.error("Error updating profile picture:", error)
+      // Revert to original image
+      setProfileImage(userProfile?.profile_picture || "/placeholder.svg?height=40&width=40")
+
+      toast({
+        title: "Error",
+        description: "Failed to update profile picture",
+        variant: "destructive",
+      })
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
   const avatarUrl = userProfile?.profile_picture || "/placeholder.svg?height=40&width=40"
-  const displayName = userProfile?.user.firstName && userProfile?.user.lastName ? `${userProfile?.user.firstName} ${userProfile?.user.firstName}` : userProfile?.user.username || ""
+  const displayName =
+    userProfile?.user.firstName && userProfile?.user.lastName
+      ? `${userProfile?.user.firstName} ${userProfile?.user.firstName}`
+      : userProfile?.user.username || ""
 
   return (
     <div className="container py-8">
@@ -106,30 +165,45 @@ export default function SettingsForm() {
                 <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
                   <div className="relative">
                     <Avatar className="h-24 w-24 border-4 border-background">
-                      <AvatarImage src={avatarUrl} alt={displayName} />
+                      <AvatarImage src={profileImage || avatarUrl} alt={displayName} />
                       <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="absolute bottom-0 right-0 rounded-full bg-background h-8 w-8"
-                      onClick={() => alert("Edit profile picture")}
-                    >
-                      <ImageIcon className="h-4 w-4" />
-                    </Button>
+                    <label htmlFor="profile-image-upload" className="absolute bottom-0 right-0 cursor-pointer">
+                      <input
+                        id="profile-image-upload"
+                        type="file"
+                        ref={fileInputRef}
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleProfileImageChange}
+                        disabled={uploadingImage}
+                      />
+                      <div className="rounded-full bg-primary text-primary-foreground p-2 shadow-sm hover:bg-primary/90 transition-colors">
+                        {uploadingImage ? (
+                          <span className="animate-spin block h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                        ) : (
+                          <ImageIcon className="h-4 w-4" />
+                        )}
+                      </div>
+                    </label>
                   </div>
 
                   <div className="flex-1 space-y-1 text-center sm:text-left">
                     <h3 className="font-medium">{profileForm.name}</h3>
                     <p className="text-sm text-muted-foreground">@{profileForm.username}</p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => alert("Change profile picture")}
-                    >
-                      Change Avatar
-                    </Button>
+                    <div className="mt-2 space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Upload a new profile picture or change your profile details below.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingImage}
+                      >
+                        {uploadingImage ? "Uploading..." : "Change Avatar"}
+                      </Button>
+                    </div>
                   </div>
                 </div>
 
