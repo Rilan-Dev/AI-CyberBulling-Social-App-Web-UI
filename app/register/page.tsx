@@ -94,7 +94,10 @@ export default function RegisterPage() {
       >
         <div className="flex items-center space-x-2 mb-2">
           <Shield className="h-8 w-8 text-blue-400" />
-          <span className="font-bold text-2xl text-white">CyberGuard AI</span>
+          {/* <span className="font-bold text-2xl text-white">CyberGuard AI</span> */}
+          <span className="inline-block text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">
+              CyberSocial
+            </span>
         </div>
         <h1 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
           Create Account
