@@ -6,9 +6,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AlertCircle, RefreshCw } from "lucide-react"
-import { Post } from "@/context/post-context"
 import ErrorBoundary from "next/dist/client/components/error-boundary"
 import { enhancedApiService } from "@/services/enhanced-api"
+import { Post } from "@/Model/post.model"
 
 export function ApiDataDisplay() {
   const [posts, setPosts] = useState<Post[]>([])
