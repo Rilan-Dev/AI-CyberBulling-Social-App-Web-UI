@@ -31,7 +31,7 @@ export function SiteHeader() {
       transition={{ type: "spring", stiffness: 100, damping: 20 }}
       className={cn(
         "sticky top-0 z-40 w-full transition-all duration-200 px-5",
-        scrolled ? "bg-background/80 backdrop-blur-lg border-b shadow-sm" : "bg-transparent",
+        scrolled ? "bg-background/80 backdrop-blur-lg border-b shadow-sm" : "bg-background/80",
       )}
     >
       <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">

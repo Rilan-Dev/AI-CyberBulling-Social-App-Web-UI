@@ -7,9 +7,12 @@ import { UserNav } from "@/components/user-nav"
 import { LogIn, PlusIcon, UserIcon } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { motion } from "framer-motion"
+import { useTheme } from "next-themes"
 
 export function AuthStatus() {
   const { isAuthenticated, loading, userProfile } = useAuth()
+  const { theme } = useTheme()
+  const isDark = theme === "dark"
 
   if (loading) {
     return (
@@ -39,7 +42,11 @@ export function AuthStatus() {
                 variant="outline"
                 size="icon"
                 asChild
-                className="bg-gray-800/50 backdrop-blur-sm border-gray-700/50 hover:bg-gray-700/70 hover:border-blue-500/50 text-gray-200"
+                className={`${
+                  isDark
+                    ? "bg-gray-800/50 backdrop-blur-sm border-gray-700/50 hover:bg-gray-700/70 hover:border-blue-500/50 text-gray-200"
+                    : "bg-gray-100/70 backdrop-blur-sm border-gray-200 hover:bg-gray-200/70 hover:border-blue-500/30 text-gray-700"
+                }`}
               >
                 <Link href={`/profile/${userProfile?.user.username}`}>
                   <UserIcon className="h-4 w-4 text-blue-400" />
@@ -59,7 +66,11 @@ export function AuthStatus() {
                 variant="outline"
                 size="icon"
                 asChild
-                className="bg-gray-800/50 backdrop-blur-sm border-gray-700/50 hover:bg-gray-700/70 hover:border-blue-500/50 text-gray-200"
+                className={`${
+                  isDark
+                    ? "bg-gray-800/50 backdrop-blur-sm border-gray-700/50 hover:bg-gray-700/70 hover:border-blue-500/50 text-gray-200"
+                    : "bg-gray-100/70 backdrop-blur-sm border-gray-200 hover:bg-gray-200/70 hover:border-blue-500/30 text-gray-700"
+                }`}
               >
                 <Link href="/create-post">
                   <PlusIcon className="h-4 w-4 text-blue-400" />
@@ -93,7 +104,11 @@ export function AuthStatus() {
         <Button
           variant="outline"
           asChild
-          className="bg-gray-800/50 backdrop-blur-sm border-gray-700/50 hover:bg-gray-700/70 hover:border-blue-500/50 text-gray-200"
+          className={`${
+            isDark
+              ? "bg-gray-800/50 backdrop-blur-sm border-gray-700/50 hover:bg-gray-700/70 hover:border-blue-500/50 text-gray-200"
+              : "bg-gray-100/70 backdrop-blur-sm border-gray-200 hover:bg-gray-200/70 hover:border-blue-500/30 text-gray-700"
+          }`}
         >
           <Link href="/login">
             <LogIn className="h-4 w-4 mr-2 text-blue-400" />

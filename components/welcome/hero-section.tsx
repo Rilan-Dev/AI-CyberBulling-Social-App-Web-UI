@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ChevronRight, ChevronDown } from "lucide-react"
 import Typewriter from "typewriter-effect"
+import { useTheme } from "next-themes"
 
 interface HeroSectionProps {
   onGetStarted: () => void
@@ -14,8 +15,12 @@ interface HeroSectionProps {
 
 export function HeroSection({ onGetStarted, onExploreFeatures }: HeroSectionProps) {
   const [showScrollIndicator, setShowScrollIndicator] = useState(true)
+  const [mounted, setMounted] = useState(false)
+  const { theme } = useTheme()
 
   useEffect(() => {
+    setMounted(true)
+
     const handleScroll = () => {
       if (window.scrollY > 100) {
         setShowScrollIndicator(false)
@@ -28,16 +33,29 @@ export function HeroSection({ onGetStarted, onExploreFeatures }: HeroSectionProp
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  // Only render the content after mounting to avoid hydration mismatch
+  if (!mounted) {
+    return null
+  }
+
   return (
     <section className="min-h-screen relative flex flex-col items-center justify-center px-4 py-20">
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,100,255,0.1),transparent_70%)]"></div>
+        <div
+          className={`absolute inset-0 ${
+            theme === "dark"
+              ? "bg-[radial-gradient(circle_at_center,rgba(0,100,255,0.1),transparent_70%)]"
+              : "bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.05),transparent_70%)]"
+          }`}
+        ></div>
         {/* Animated grid background */}
         <div
           className="absolute inset-0"
           style={{
             backgroundImage:
-              "linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)",
+              theme === "dark"
+                ? "linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)"
+                : "linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)",
             backgroundSize: "40px 40px",
           }}
         ></div>
@@ -49,15 +67,26 @@ export function HeroSection({ onGetStarted, onExploreFeatures }: HeroSectionProp
         transition={{ duration: 0.8 }}
         className="relative z-10 text-center max-w-4xl mx-auto"
       >
-        <Badge variant="outline" className="mb-4 px-3 py-1 text-sm border-blue-400 text-blue-300">
+        <Badge
+          variant="outline"
+          className={`mb-4 px-3 py-1 text-sm ${
+            theme === "dark" ? "border-blue-400 text-blue-300" : "border-blue-500 text-blue-600"
+          }`}
+        >
           Next-Gen AI Technology
         </Badge>
 
-        <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+        <h1
+          className={`text-5xl md:text-7xl font-bold mb-6 bg-clip-text text-transparent ${
+            theme === "dark"
+              ? "bg-gradient-to-r from-blue-400 to-purple-500"
+              : "bg-gradient-to-r from-blue-600 to-purple-600"
+          }`}
+        >
           Cyberbullying Prediction AI
         </h1>
 
-        <div className="h-12 mb-6 text-xl md:text-2xl text-blue-200">
+        <div className={`h-12 mb-6 text-xl md:text-2xl ${theme === "dark" ? "text-blue-200" : "text-blue-700"}`}>
           <Typewriter
             options={{
               strings: [
@@ -72,7 +101,11 @@ export function HeroSection({ onGetStarted, onExploreFeatures }: HeroSectionProp
           />
         </div>
 
-        <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+        <p
+          className={`text-lg md:text-xl mb-8 max-w-2xl mx-auto ${
+            theme === "dark" ? "text-gray-300" : "text-gray-700"
+          }`}
+        >
           An advanced system combining Natural Language Processing and Recurrent Neural Networks to predict and prevent
           cyberbullying across digital platforms.
         </p>
@@ -81,7 +114,11 @@ export function HeroSection({ onGetStarted, onExploreFeatures }: HeroSectionProp
           <Button
             size="lg"
             onClick={onGetStarted}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0"
+            className={`${
+              theme === "dark"
+                ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0"
+                : "bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white border-0"
+            }`}
           >
             Get Started
             <ChevronRight className="ml-2 h-4 w-4" />
@@ -90,7 +127,11 @@ export function HeroSection({ onGetStarted, onExploreFeatures }: HeroSectionProp
             size="lg"
             variant="outline"
             onClick={onExploreFeatures}
-            className="border-blue-400 text-blue-300 hover:bg-blue-900/20"
+            className={`${
+              theme === "dark"
+                ? "border-blue-400 text-blue-300 hover:bg-blue-900/20"
+                : "border-blue-500 text-blue-600 hover:bg-blue-100/50"
+            }`}
           >
             Explore Features
           </Button>
@@ -104,9 +145,11 @@ export function HeroSection({ onGetStarted, onExploreFeatures }: HeroSectionProp
         animate={{ opacity: showScrollIndicator ? 1 : 0 }}
         transition={{ duration: 0.5 }}
       >
-        <span className="text-sm text-blue-300 mb-2">Scroll to explore</span>
+        <span className={`text-sm mb-2 ${theme === "dark" ? "text-blue-300" : "text-blue-600"}`}>
+          Scroll to explore
+        </span>
         <motion.div animate={{ y: [0, 10, 0] }} transition={{ repeat: Number.POSITIVE_INFINITY, duration: 1.5 }}>
-          <ChevronDown className="h-6 w-6 text-blue-300" />
+          <ChevronDown className={`h-6 w-6 ${theme === "dark" ? "text-blue-300" : "text-blue-600"}`} />
         </motion.div>
       </motion.div>
     </section>

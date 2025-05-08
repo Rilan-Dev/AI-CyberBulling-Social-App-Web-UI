@@ -22,7 +22,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     // Only check authentication for protected routes
     if (!loading && !isAuthenticated && isProtectedRoute(pathname)) {
       // Redirect to login with the current path as the redirect parameter
-      router.push(`/login?redirect=${encodeURIComponent(pathname || "/")}`)
+      router.push(`/welcome?redirect=${encodeURIComponent(pathname || "/")}`)
     }
   }, [isAuthenticated, loading, router, pathname])
 

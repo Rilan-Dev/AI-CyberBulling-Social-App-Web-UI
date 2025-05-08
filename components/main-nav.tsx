@@ -6,11 +6,14 @@ import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/context/auth-context"
+import { useTheme } from "next-themes"
 
 export function MainNav() {
   const pathname = usePathname()
   const { userProfile } = useAuth()
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+  const { theme } = useTheme()
+  const isDark = theme === "dark"
 
   const navItems = [
     { href: "/", label: "Home" },
@@ -30,7 +33,13 @@ export function MainNav() {
             href={item.href}
             className={cn(
               "relative text-sm font-medium transition-colors",
-              isActive ? "text-primary" : "text-muted-foreground",
+              isActive
+                ? isDark
+                  ? "text-primary"
+                  : "text-primary"
+                : isDark
+                  ? "text-muted-foreground"
+                  : "text-muted-foreground",
             )}
             onMouseEnter={() => setHoveredIndex(index)}
             onMouseLeave={() => setHoveredIndex(null)}
@@ -38,7 +47,7 @@ export function MainNav() {
             {hoveredIndex === index && (
               <motion.span
                 layoutId="navHover"
-                className="absolute inset-0 z-10 bg-primary/10 rounded-md"
+                className={`absolute inset-0 z-10 ${isDark ? "bg-primary/10" : "bg-primary/5"} rounded-md`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}

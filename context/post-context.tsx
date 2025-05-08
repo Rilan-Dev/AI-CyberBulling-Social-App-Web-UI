@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useEffect } from "react"
+import { createContext, useContext, useState, useEffect, useCallback } from "react"
 import type { Post } from "@/Model/post.model"
 import { postService } from "@/services/post.service"
 import { useToast } from "@/components/ui/use-toast"
@@ -27,12 +27,15 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
+      console.log("Fetching posts from API...")
       const fetchedPosts = await postService.getPosts()
       // Ensure we always have an array
       if (fetchedPosts && Array.isArray(fetchedPosts)) {
+        console.log(`Successfully fetched ${fetchedPosts.length} posts`)
         setPosts(fetchedPosts)
       } else {
         console.warn("API did not return an array of posts:", fetchedPosts)
@@ -51,7 +54,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
 
   // Function to add a new post
   const addPost = async (formData: FormData): Promise<Post | null> => {
@@ -66,19 +69,9 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newPost = await postService.createPost(formData)
 
       if (newPost) {
-        // // Ensure posts is always an array before updating
-        // setPosts((prevPosts) => {
-        //   if (Array.isArray(prevPosts)) {
-        //     return [newPost, ...prevPosts]
-        //   } else {
-        //     console.warn("prevPosts is not an array:", prevPosts)
-        //     return [newPost]
-        //   }
-        // })
-        // return newPost
-        fetchPosts();
+        fetchPosts()
       }
-      return newPost ?? null
+      return null
     } catch (error) {
       console.error("Error adding post:", error)
       toast({
@@ -92,22 +85,11 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deletePost = async (id: number) => {
     try {
-      
       // Make sure we're using FormData
       const deletePost = await postService.deletePost(id)
 
       if (deletePost) {
-        // // Ensure posts is always an array before updating
-        // setPosts((prevPosts) => {
-        //   if (Array.isArray(prevPosts)) {
-        //     return [newPost, ...prevPosts]
-        //   } else {
-        //     console.warn("prevPosts is not an array:", prevPosts)
-        //     return [newPost]
-        //   }
-        // })
-        // return newPost
-        fetchPosts();
+        fetchPosts()
       }
     } catch (error) {
       console.error("Error deleting post:", error)
@@ -221,8 +203,9 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Load posts on initial render
   useEffect(() => {
+    console.log("PostProvider mounted, fetching initial posts")
     fetchPosts()
-  }, [])
+  }, [fetchPosts])
 
   return (
     <PostContext.Provider

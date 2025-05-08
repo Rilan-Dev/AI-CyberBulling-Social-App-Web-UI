@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ImageIcon, Loader2, CheckCircle } from "lucide-react"
 import { useAuth } from "@/context/auth-context"
 import { toast } from "@/components/ui/use-toast"
+import { useTheme } from "next-themes"
 import { userService } from "@/services/user.service"
 
 // Animation variants
@@ -40,6 +41,8 @@ const staggerContainer = {
 
 export default function SettingsForm() {
   const { userProfile } = useAuth()
+  const { theme } = useTheme()
+  const isDark = theme === "dark"
 
   const [profileForm, setProfileForm] = useState({
     name:
@@ -175,14 +178,19 @@ export default function SettingsForm() {
       : userProfile?.user.username || ""
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black">
+    <div
+      className={`min-h-screen ${isDark ? "bg-gradient-to-b from-gray-900 to-black" : "bg-gradient-to-b from-gray-50 to-white"}`}
+    >
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,100,255,0.1),transparent_70%)]"></div>
+        <div
+          className={`absolute inset-0 ${isDark ? "bg-[radial-gradient(circle_at_center,rgba(0,100,255,0.1),transparent_70%)]" : "bg-[radial-gradient(circle_at_center,rgba(0,100,255,0.05),transparent_70%)]"}`}
+        ></div>
         <div
           className="absolute inset-0"
           style={{
-            backgroundImage:
-              "linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)",
+            backgroundImage: isDark
+              ? "linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)"
+              : "linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)",
             backgroundSize: "40px 40px",
           }}
         ></div>
@@ -191,7 +199,7 @@ export default function SettingsForm() {
       <div className="container py-8 relative z-10">
         <div className="max-w-4xl mx-auto">
           <motion.h1
-            className="text-3xl font-bold mb-6 text-white"
+            className={`text-3xl font-bold mb-6 ${isDark ? "text-white" : "text-gray-900"}`}
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
@@ -205,22 +213,24 @@ export default function SettingsForm() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              <TabsList className="grid w-full max-w-md grid-cols-3 bg-gray-800/50 border border-gray-700">
+              <TabsList
+                className={`grid w-full max-w-md grid-cols-3 ${isDark ? "bg-gray-800/50 border border-gray-700" : "bg-gray-100/80 border border-gray-200"}`}
+              >
                 <TabsTrigger
                   value="profile"
-                  className="data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-300 text-gray-300"
+                  className={`${isDark ? "data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-300 text-gray-300" : "data-[state=active]:bg-blue-100/70 data-[state=active]:text-blue-700 text-gray-600"}`}
                 >
                   Profile
                 </TabsTrigger>
                 <TabsTrigger
                   value="notifications"
-                  className="data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-300 text-gray-300"
+                  className={`${isDark ? "data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-300 text-gray-300" : "data-[state=active]:bg-blue-100/70 data-[state=active]:text-blue-700 text-gray-600"}`}
                 >
                   Notifications
                 </TabsTrigger>
                 <TabsTrigger
                   value="privacy"
-                  className="data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-300 text-gray-300"
+                  className={`${isDark ? "data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-300 text-gray-300" : "data-[state=active]:bg-blue-100/70 data-[state=active]:text-blue-700 text-gray-600"}`}
                 >
                   Privacy
                 </TabsTrigger>
@@ -229,10 +239,12 @@ export default function SettingsForm() {
 
             <TabsContent value="profile">
               <motion.div variants={fadeIn} initial="hidden" animate="visible">
-                <Card className="bg-gray-900/70 backdrop-blur-lg border border-gray-800 text-gray-200">
+                <Card
+                  className={`${isDark ? "bg-gray-900/70 backdrop-blur-lg border border-gray-800 text-gray-200" : "bg-white/90 backdrop-blur-lg border border-gray-200 text-gray-800"}`}
+                >
                   <CardHeader>
-                    <CardTitle className="text-white">Profile Information</CardTitle>
-                    <CardDescription className="text-gray-400">
+                    <CardTitle className={isDark ? "text-white" : "text-gray-900"}>Profile Information</CardTitle>
+                    <CardDescription className={isDark ? "text-gray-400" : "text-gray-500"}>
                       Update your profile information and how others see you on the platform.
                     </CardDescription>
                   </CardHeader>
@@ -288,7 +300,7 @@ export default function SettingsForm() {
                               size="sm"
                               onClick={() => fileInputRef.current?.click()}
                               disabled={uploadingImage}
-                              className="border-blue-500 text-blue-300 hover:bg-blue-900/20"
+                              className={`${isDark ? "border-blue-500 text-blue-300 hover:bg-blue-900/20" : "border-blue-500 text-blue-600 hover:bg-blue-50"}`}
                             >
                               {uploadingImage ? "Uploading..." : "Change Avatar"}
                             </Button>
@@ -304,7 +316,7 @@ export default function SettingsForm() {
                       animate="visible"
                     >
                       <motion.div className="space-y-2" variants={slideUp}>
-                        <Label htmlFor="name" className="text-gray-300">
+                        <Label htmlFor="name" className={isDark ? "text-gray-300" : "text-gray-700"}>
                           Name
                         </Label>
                         <Input
@@ -312,12 +324,12 @@ export default function SettingsForm() {
                           name="name"
                           value={profileForm.name}
                           onChange={handleProfileChange}
-                          className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                          className={`${isDark ? "bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500" : "bg-white/50 border-gray-300 text-gray-900 placeholder:text-gray-400"} focus:border-blue-500 focus:ring-blue-500`}
                         />
                       </motion.div>
 
                       <motion.div className="space-y-2" variants={slideUp}>
-                        <Label htmlFor="username" className="text-gray-300">
+                        <Label htmlFor="username" className={isDark ? "text-gray-300" : "text-gray-700"}>
                           Username
                         </Label>
                         <Input
@@ -325,13 +337,13 @@ export default function SettingsForm() {
                           name="username"
                           value={profileForm.username}
                           onChange={handleProfileChange}
-                          className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                          className={`${isDark ? "bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500" : "bg-white/50 border-gray-300 text-gray-900 placeholder:text-gray-400"} focus:border-blue-500 focus:ring-blue-500`}
                         />
                       </motion.div>
                     </motion.div>
 
                     <motion.div className="space-y-2" variants={slideUp}>
-                      <Label htmlFor="bio" className="text-gray-300">
+                      <Label htmlFor="bio" className={isDark ? "text-gray-300" : "text-gray-700"}>
                         Bio
                       </Label>
                       <Textarea
@@ -340,7 +352,7 @@ export default function SettingsForm() {
                         value={profileForm.bio}
                         onChange={handleProfileChange}
                         rows={4}
-                        className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                        className={`${isDark ? "bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500" : "bg-white/50 border-gray-300 text-gray-900 placeholder:text-gray-400"} focus:border-blue-500 focus:ring-blue-500`}
                       />
                     </motion.div>
 
@@ -351,7 +363,7 @@ export default function SettingsForm() {
                       animate="visible"
                     >
                       <motion.div className="space-y-2" variants={slideUp}>
-                        <Label htmlFor="website" className="text-gray-300">
+                        <Label htmlFor="website" className={isDark ? "text-gray-300" : "text-gray-700"}>
                           Website
                         </Label>
                         <Input
@@ -359,12 +371,12 @@ export default function SettingsForm() {
                           name="website"
                           value={profileForm.website}
                           onChange={handleProfileChange}
-                          className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                          className={`${isDark ? "bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500" : "bg-white/50 border-gray-300 text-gray-900 placeholder:text-gray-400"} focus:border-blue-500 focus:ring-blue-500`}
                         />
                       </motion.div>
 
                       <motion.div className="space-y-2" variants={slideUp}>
-                        <Label htmlFor="location" className="text-gray-300">
+                        <Label htmlFor="location" className={isDark ? "text-gray-300" : "text-gray-700"}>
                           Location
                         </Label>
                         <Input
@@ -372,13 +384,13 @@ export default function SettingsForm() {
                           name="location"
                           value={profileForm.location}
                           onChange={handleProfileChange}
-                          className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                          className={`${isDark ? "bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500" : "bg-white/50 border-gray-300 text-gray-900 placeholder:text-gray-400"} focus:border-blue-500 focus:ring-blue-500`}
                         />
                       </motion.div>
                     </motion.div>
 
                     <motion.div className="space-y-2" variants={slideUp}>
-                      <Label htmlFor="email" className="text-gray-300">
+                      <Label htmlFor="email" className={isDark ? "text-gray-300" : "text-gray-700"}>
                         Email
                       </Label>
                       <Input
@@ -387,7 +399,7 @@ export default function SettingsForm() {
                         type="email"
                         value={profileForm.email}
                         onChange={handleProfileChange}
-                        className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                        className={`${isDark ? "bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500" : "bg-white/50 border-gray-300 text-gray-900 placeholder:text-gray-400"} focus:border-blue-500 focus:ring-blue-500`}
                       />
                     </motion.div>
                   </CardContent>
@@ -420,10 +432,12 @@ export default function SettingsForm() {
 
             <TabsContent value="notifications">
               <motion.div variants={fadeIn} initial="hidden" animate="visible">
-                <Card className="bg-gray-900/70 backdrop-blur-lg border border-gray-800 text-gray-200">
+                <Card
+                  className={`${isDark ? "bg-gray-900/70 backdrop-blur-lg border border-gray-800 text-gray-200" : "bg-white/90 backdrop-blur-lg border border-gray-200 text-gray-800"}`}
+                >
                   <CardHeader>
-                    <CardTitle className="text-white">Notification Preferences</CardTitle>
-                    <CardDescription className="text-gray-400">
+                    <CardTitle className={isDark ? "text-white" : "text-gray-900"}>Notification Preferences</CardTitle>
+                    <CardDescription className={isDark ? "text-gray-400" : "text-gray-500"}>
                       Manage how and when you receive notifications.
                     </CardDescription>
                   </CardHeader>
@@ -523,10 +537,12 @@ export default function SettingsForm() {
 
             <TabsContent value="privacy">
               <motion.div variants={fadeIn} initial="hidden" animate="visible">
-                <Card className="bg-gray-900/70 backdrop-blur-lg border border-gray-800 text-gray-200">
+                <Card
+                  className={`${isDark ? "bg-gray-900/70 backdrop-blur-lg border border-gray-800 text-gray-200" : "bg-white/90 backdrop-blur-lg border border-gray-200 text-gray-800"}`}
+                >
                   <CardHeader>
-                    <CardTitle className="text-white">Privacy Settings</CardTitle>
-                    <CardDescription className="text-gray-400">
+                    <CardTitle className={isDark ? "text-white" : "text-gray-900"}>Privacy Settings</CardTitle>
+                    <CardDescription className={isDark ? "text-gray-400" : "text-gray-500"}>
                       Control your privacy and security preferences.
                     </CardDescription>
                   </CardHeader>

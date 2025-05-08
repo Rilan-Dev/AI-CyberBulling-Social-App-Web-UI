@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Cookies from "js-cookie"
+import { useTheme } from "next-themes"
 
 // Import components
 import { HeroSection } from "@/components/welcome/hero-section"
@@ -20,6 +21,13 @@ import { ModelArchitecture } from "@/components/welcome/model-architecture"
 export default function WelcomePage() {
   const router = useRouter()
   const [activeSection, setActiveSection] = useState("intro")
+  const { theme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  // Set mounted state when component mounts
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Set visited cookie when the welcome page is viewed
   useEffect(() => {
@@ -49,8 +57,19 @@ export default function WelcomePage() {
     { id: "team", label: "Team" },
   ]
 
+  // Only render the content after mounting to avoid hydration mismatch
+  if (!mounted) {
+    return null
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-blue-900 to-gray-900 text-white overflow-x-hidden">
+    <div
+      className={`min-h-screen overflow-x-hidden ${
+        theme === "dark"
+          ? "bg-gradient-to-b from-gray-900 via-blue-900 to-gray-900 text-white"
+          : "bg-gradient-to-b from-gray-50 via-blue-50 to-gray-50 text-gray-900"
+      }`}
+    >
       {/* Hero Section */}
       <div id="intro">
         <HeroSection onGetStarted={handleGetStarted} onExploreFeatures={() => scrollToSection("features")} />
@@ -78,7 +97,9 @@ export default function WelcomePage() {
         id="demo"
         title="See It In Action"
         subtitle="How our AI detects cyberbullying content"
-        className="bg-gradient-to-b from-gray-900 to-gray-950"
+        className={
+          theme === "dark" ? "bg-gradient-to-b from-gray-900 to-gray-950" : "bg-gradient-to-b from-gray-100 to-gray-200"
+        }
       >
         <DemoSection />
       </SectionContainer>
@@ -100,7 +121,9 @@ export default function WelcomePage() {
         id="process"
         title="How It Works"
         subtitle="Our comprehensive approach to cyberbullying detection"
-        className="bg-gradient-to-b from-gray-900 to-gray-950"
+        className={
+          theme === "dark" ? "bg-gradient-to-b from-gray-900 to-gray-950" : "bg-gradient-to-b from-gray-100 to-gray-200"
+        }
       >
         <ProcessSection />
       </SectionContainer>

@@ -16,6 +16,7 @@ import { analyzeImage, analyzeText } from "@/services/api"
 import type { AnalysisResult } from "@/Model/cyberbulling.model"
 import { toast } from "@/components/ui/use-toast"
 import { motion } from "framer-motion"
+import { getThemeColors, useThemeDetector } from "@/lib/theme-utils"
 
 // Animation variants
 const fadeIn = {
@@ -53,6 +54,11 @@ export default function CreatePostForm() {
   const [imageResult, setImageResult] = useState<AnalysisResult | null>(null)
   const [analysisComplete, setAnalysisComplete] = useState(false)
   const [pendingAnalysis, setPendingAnalysis] = useState(false)
+
+  const { isDarkTheme, mounted } = useThemeDetector()
+  
+  // Get theme colors
+  const colors = getThemeColors(isDarkTheme)
 
   // Effect to trigger analysis when content changes
   useEffect(() => {
@@ -374,14 +380,15 @@ export default function CreatePostForm() {
   }, [pendingAnalysis, isAnalyzing, isSubmitting])
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black">
+    <div className={`min-h-screen ${colors.gradientPrimary} relative overflow-hidden`}>
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,100,255,0.1),transparent_70%)]"></div>
+        <div className={`absolute inset-0 ${colors.gradientAccent}`}></div>
         <div
           className="absolute inset-0"
           style={{
-            backgroundImage:
-              "linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)",
+            backgroundImage: isDarkTheme
+              ? "linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)"
+              : "linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)",
             backgroundSize: "40px 40px",
           }}
         ></div>
@@ -390,7 +397,7 @@ export default function CreatePostForm() {
       <div className="container mx-auto py-8 relative z-10">
         <div className="max-w-2xl mx-auto">
           <motion.h1
-            className="text-3xl font-bold mb-6 text-white"
+            className={`text-3xl font-bold mb-6 ${colors.textPrimary}`}
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
@@ -399,15 +406,15 @@ export default function CreatePostForm() {
           </motion.h1>
 
           <motion.div variants={fadeIn} initial="hidden" animate="visible">
-            <Card className="bg-gray-900/70 backdrop-blur-lg border border-gray-800 text-gray-200">
+            <Card className={`${colors.cardBg} ${colors.backdropBlur} ${colors.cardBorder} ${colors.textPrimary}`}>
               <CardHeader>
-                <CardTitle className="text-white">New Post</CardTitle>
+                <CardTitle className={colors.textPrimary}>New Post</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <motion.div variants={slideUp}>
                   <Textarea
                     placeholder="What's on your mind?"
-                    className="min-h-[120px] bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                    className={`min-h-[120px] ${colors.inputBg} ${colors.inputBorder} ${colors.textPrimary} placeholder:${colors.textTertiary}`}
                     value={text}
                     onChange={(e) => {
                       setText(e.target.value)
@@ -428,10 +435,16 @@ export default function CreatePostForm() {
                       <div
                         className={`p-2 rounded-md text-sm ${
                           textResult.status === "clean"
-                            ? "bg-green-900/20 text-green-300 border border-green-800/50"
+                            ? isDarkTheme
+                              ? "bg-green-900/20 text-green-300 border border-green-800/50"
+                              : "bg-green-50 text-green-700 border border-green-200"
                             : textResult.status === "flagged"
+                            ? isDarkTheme
                               ? "bg-yellow-900/20 text-yellow-300 border border-yellow-800/50"
-                              : "bg-red-900/20 text-red-300 border border-red-800/50"
+                              : "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                            : isDarkTheme
+                            ? "bg-red-900/20 text-red-300 border border-red-800/50"
+                            : "bg-red-50 text-red-700 border border-red-200"
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -452,7 +465,9 @@ export default function CreatePostForm() {
                     className={`relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors ${
                       isDragging
                         ? "border-blue-500 bg-blue-900/10"
-                        : "border-gray-700 hover:border-blue-500 dark:border-gray-700"
+                        : isDarkTheme
+                        ? "border-gray-700 hover:border-blue-500"
+                        : "border-gray-300 hover:border-blue-500"
                     }`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
@@ -515,11 +530,11 @@ export default function CreatePostForm() {
                       </div>
                     ) : (
                       <>
-                        <ImageIcon className="mb-4 h-10 w-10 text-gray-500" />
-                        <p className="mb-2 text-sm font-medium text-gray-300">
+                        <ImageIcon className={`mb-4 h-10 w-10 ${colors.textTertiary}`} />
+                        <p className={`mb-2 text-sm font-medium ${colors.textSecondary}`}>
                           Drag and drop an image here, or click to browse
                         </p>
-                        <p className="text-xs text-gray-500">Supports JPG, PNG, GIF up to 10MB</p>
+                        <p className={`text-xs ${colors.textTertiary}`}>Supports JPG, PNG, GIF up to 10MB</p>
                       </>
                     )}
                   </div>
@@ -535,10 +550,16 @@ export default function CreatePostForm() {
                       <div
                         className={`p-2 rounded-md text-sm ${
                           imageResult.status === "clean"
-                            ? "bg-green-900/20 text-green-300 border border-green-800/50"
+                            ? isDarkTheme
+                              ? "bg-green-900/20 text-green-300 border border-green-800/50"
+                              : "bg-green-50 text-green-700 border border-green-200"
                             : imageResult.status === "flagged"
+                            ? isDarkTheme
                               ? "bg-yellow-900/20 text-yellow-300 border border-yellow-800/50"
-                              : "bg-red-900/20 text-red-300 border border-red-800/50"
+                              : "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                            : isDarkTheme
+                            ? "bg-red-900/20 text-red-300 border border-red-800/50"
+                            : "bg-red-50 text-red-700 border border-red-200"
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -562,10 +583,18 @@ export default function CreatePostForm() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <Alert className="border-blue-800 bg-blue-900/20 text-blue-300">
-                      <Loader2 className="h-5 w-5 text-blue-400 animate-spin" />
-                      <AlertTitle className="text-blue-300">Analyzing Content</AlertTitle>
-                      <AlertDescription className="text-blue-400">
+                    <Alert
+                      className={
+                        isDarkTheme
+                          ? "border-blue-800 bg-blue-900/20 text-blue-300"
+                          : "border-blue-200 bg-blue-50 text-blue-700"
+                      }
+                    >
+                      <Loader2 className={`h-5 w-5 ${isDarkTheme ? "text-blue-400" : "text-blue-600"} animate-spin`} />
+                      <AlertTitle className={isDarkTheme ? "text-blue-300" : "text-blue-700"}>
+                        Analyzing Content
+                      </AlertTitle>
+                      <AlertDescription className={isDarkTheme ? "text-blue-400" : "text-blue-600"}>
                         Please wait while we analyze your content for policy compliance.
                       </AlertDescription>
                     </Alert>
@@ -580,20 +609,40 @@ export default function CreatePostForm() {
                     transition={{ duration: 0.3 }}
                   >
                     {status === "clean" && (
-                      <Alert className="border-green-800 bg-green-900/20 text-green-300">
-                        <CheckCircle className="h-5 w-5 text-green-400" />
-                        <AlertTitle className="text-green-300">Content Ready to Post</AlertTitle>
-                        <AlertDescription className="text-green-400">
+                      <Alert
+                        className={
+                          isDarkTheme
+                            ? "border-green-800 bg-green-900/20 text-green-300"
+                            : "border-green-200 bg-green-50 text-green-700"
+                        }
+                      >
+                        <CheckCircle
+                          className={`h-5 w-5 ${isDarkTheme ? "text-green-400" : "text-green-600"}`}
+                        />
+                        <AlertTitle className={isDarkTheme ? "text-green-300" : "text-green-700"}>
+                          Content Ready to Post
+                        </AlertTitle>
+                        <AlertDescription className={isDarkTheme ? "text-green-400" : "text-green-600"}>
                           No cyberbullying indicators detected in your content.
                         </AlertDescription>
                       </Alert>
                     )}
 
                     {status === "flagged" && (
-                      <Alert className="border-yellow-800 bg-yellow-900/20 text-yellow-300">
-                        <AlertTriangle className="h-5 w-5 text-yellow-400" />
-                        <AlertTitle className="text-yellow-300">Content Flagged</AlertTitle>
-                        <AlertDescription className="text-yellow-400">
+                      <Alert
+                        className={
+                          isDarkTheme
+                            ? "border-yellow-800 bg-yellow-900/20 text-yellow-300"
+                            : "border-yellow-200 bg-yellow-50 text-yellow-700"
+                        }
+                      >
+                        <AlertTriangle
+                          className={`h-5 w-5 ${isDarkTheme ? "text-yellow-400" : "text-yellow-600"}`}
+                        />
+                        <AlertTitle className={isDarkTheme ? "text-yellow-300" : "text-yellow-700"}>
+                          Content Flagged
+                        </AlertTitle>
+                        <AlertDescription className={isDarkTheme ? "text-yellow-400" : "text-yellow-600"}>
                           {textResult?.status === "flagged" && textResult.reason}
                           {imageResult?.status === "flagged" && imageResult.reason}
                           <p className="mt-2">
@@ -604,10 +653,20 @@ export default function CreatePostForm() {
                     )}
 
                     {status === "blocked" && (
-                      <Alert className="border-red-800 bg-red-900/20 text-red-300">
-                        <AlertCircle className="h-5 w-5 text-red-400" />
-                        <AlertTitle className="text-red-300">Content Blocked</AlertTitle>
-                        <AlertDescription className="text-red-400">
+                      <Alert
+                        className={
+                          isDarkTheme
+                            ? "border-red-800 bg-red-900/20 text-red-300"
+                            : "border-red-200 bg-red-50 text-red-700"
+                        }
+                      >
+                        <AlertCircle
+                          className={`h-5 w-5 ${isDarkTheme ? "text-red-400" : "text-red-600"}`}
+                        />
+                        <AlertTitle className={isDarkTheme ? "text-red-300" : "text-red-700"}>
+                          Content Blocked
+                        </AlertTitle>
+                        <AlertDescription className={isDarkTheme ? "text-red-400" : "text-red-600"}>
                           {textResult?.status === "blocked" && (
                             <p className="mb-2">{textResult.reason || "Your text contains prohibited content."}</p>
                           )}
@@ -626,7 +685,9 @@ export default function CreatePostForm() {
                   <Button
                     variant="outline"
                     onClick={() => router.back()}
-                    className="border-gray-700 text-gray-300 hover:bg-gray-800"
+                    className={isDarkTheme 
+                      ? "border-gray-700 text-gray-300 hover:bg-gray-800" 
+                      : "border-gray-300 text-gray-700 hover:bg-gray-100"}
                   >
                     Cancel
                   </Button>
@@ -635,7 +696,11 @@ export default function CreatePostForm() {
                   <Button
                     onClick={handleSubmit}
                     disabled={!canSubmit() || isAnalyzing || isSubmitting || pendingAnalysis}
-                    className="min-w-[120px] bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-800 disabled:text-gray-500"
+                    className={`min-w-[120px] ${
+                      isDarkTheme
+                        ? "bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-800 disabled:text-gray-500"
+                        : "bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-200 disabled:text-gray-500"
+                    }`}
                   >
                     {isAnalyzing || pendingAnalysis ? (
                       <>
@@ -660,3 +725,4 @@ export default function CreatePostForm() {
     </div>
   )
 }
+
