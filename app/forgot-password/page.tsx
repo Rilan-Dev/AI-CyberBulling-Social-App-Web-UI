@@ -3,19 +3,21 @@
 import type React from "react"
 
 import { useState } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Loader2, Shield, CheckCircle, ArrowLeft } from "lucide-react"
+import { useThemeDetector } from "@/lib/theme-utils"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const { isDarkTheme } = useThemeDetector()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -72,69 +74,94 @@ export default function ForgotPasswordPage() {
       >
         <div className="bg-gray-900/70 backdrop-blur-lg border border-gray-800 rounded-xl shadow-2xl overflow-hidden">
           <div className="p-6 sm:p-8">
-            {!isSubmitted ? (
-              <>
-                <h2 className="text-xl font-semibold text-white mb-2 text-center">Forgot your password?</h2>
-                <p className="text-gray-400 text-center mb-6">
-                  Enter your email address and we'll send you a link to reset your password.
-                </p>
+            <AnimatePresence mode="wait">
+              {!isSubmitted ? (
+                <motion.div
+                  key="form"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <h2 className="text-xl font-semibold text-white mb-2 text-center">Forgot your password?</h2>
+                  <p className="text-gray-400 text-center mb-6">
+                    Enter your email address and we'll send you a link to reset your password.
+                  </p>
 
-                {error && (
-                  <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-                    <Alert variant="destructive" className="bg-red-900/30 border-red-800 text-red-200">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  </motion.div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-gray-300">
-                      Email
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Enter your email address"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0 h-11"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      "Send Reset Link"
+                  <AnimatePresence>
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="mb-6"
+                      >
+                        <Alert variant="destructive" className="bg-red-900/30 border-red-800 text-red-200">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription>{error}</AlertDescription>
+                        </Alert>
+                      </motion.div>
                     )}
+                  </AnimatePresence>
+
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-gray-300">
+                        Email
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="Enter your email address"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0 h-11"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        "Send Reset Link"
+                      )}
+                    </Button>
+                  </form>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="success"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4 }}
+                  className="text-center py-4"
+                >
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-600/20 mb-4">
+                    <CheckCircle className="h-8 w-8 text-green-500" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-white mb-2">Check your email</h2>
+                  <p className="text-gray-400 mb-6">
+                    We've sent a password reset link to <span className="text-blue-400">{email}</span>
+                  </p>
+                  <Button
+                    onClick={() => setIsSubmitted(false)}
+                    variant="outline"
+                    className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Try another email
                   </Button>
-                </form>
-              </>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-center py-4"
-              >
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-600/20 mb-4">
-                  <CheckCircle className="h-8 w-8 text-green-500" />
-                </div>
-                <h2 className="text-xl font-semibold text-white mb-2">Check your email</h2>
-                <p className="text-gray-400 mb-6">
-                  We've sent a password reset link to <span className="text-blue-400">{email}</span>
-                </p>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 

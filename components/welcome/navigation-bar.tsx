@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Shield } from "lucide-react"
+import { Moon, Shield, Sun } from 'lucide-react'
 import { useTheme } from "next-themes"
+import { motion, AnimatePresence } from "framer-motion"
 
 interface NavigationItem {
   id: string
@@ -20,7 +21,7 @@ interface NavigationBarProps {
 export function NavigationBar({ items, activeSection, onSectionChange, onLogin }: NavigationBarProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const { theme } = useTheme()
+  const { theme, setTheme } = useTheme()
 
   useEffect(() => {
     setMounted(true)
@@ -36,6 +37,14 @@ export function NavigationBar({ items, activeSection, onSectionChange, onLogin }
   // Only render the content after mounting to avoid hydration mismatch
   if (!mounted) {
     return null
+  }
+
+  const currentTheme = theme === "system" 
+    ? window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+    : theme
+
+  const toggleTheme = () => {
+    setTheme(currentTheme === "dark" ? "light" : "dark")
   }
 
   return (
@@ -73,14 +82,54 @@ export function NavigationBar({ items, activeSection, onSectionChange, onLogin }
               </button>
             ))}
           </nav>
-          <Button
-            onClick={onLogin}
-            className={
-              theme === "dark" ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"
-            }
-          >
-            Login
-          </Button>
+          <div className="flex items-center space-x-3">
+            {/* Theme Toggle Button */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleTheme}
+              className={`
+                p-2 rounded-full transition-colors duration-200
+                ${theme === "dark" 
+                  ? "bg-gray-800 hover:bg-gray-700 text-blue-400" 
+                  : "bg-gray-100 hover:bg-gray-200 text-blue-600"}
+              `}
+              aria-label="Toggle theme"
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                {currentTheme === "dark" ? (
+                  <motion.div
+                    key="moon"
+                    initial={{ y: -20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 20, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Moon className="h-5 w-5" />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="sun"
+                    initial={{ y: -20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 20, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Sun className="h-5 w-5" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.button>
+            
+            <Button
+              onClick={onLogin}
+              className={
+                theme === "dark" ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"
+              }
+            >
+              Login
+            </Button>
+          </div>
         </div>
       </div>
     </div>

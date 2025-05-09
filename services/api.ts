@@ -124,9 +124,9 @@ export const getCurrentUser = async () => {
 export const getPosts = async () => {
   try {
     apiLogger.logRequest("/posts", "GET")
-    const response = await api.get("/posts")
-    apiLogger.logResponse("/posts", "GET", 200, response.data)
-    return response.data
+    const response = await enhancedApiService.getPosts()
+    apiLogger.logResponse("/posts", "GET", 200, response)
+    return response
   } catch (error) {
     apiLogger.logError("/posts", "GET", error)
     console.error("Error fetching posts:", error)
@@ -149,22 +149,13 @@ export const getPost = async (id: string) => {
 
 export const createPost = async (postData: FormData | any) => {
   try {
-    apiLogger.logRequest("/posts", "POST")
-
-    // Handle FormData properly
-    let headers = {}
-    if (postData instanceof FormData) {
-      // Don't set Content-Type for FormData - browser will set it with boundary
-      headers = {}
-    } else {
-      headers = { "Content-Type": "application/json" }
-    }
-
-    const response = await api.post("/posts", postData, { headers })
-    apiLogger.logResponse("/posts", "POST", 200, response.data)
+    const response = await api.post("/posts/", postData, {
+      headers: {
+        "Content-Type": postData instanceof FormData ? "multipart/form-data" : "application/json",
+      },
+    })
     return response.data
   } catch (error) {
-    apiLogger.logError("/posts", "POST", error)
     console.error("Error creating post:", error)
     throw error
   }
@@ -173,7 +164,7 @@ export const createPost = async (postData: FormData | any) => {
 export const likePost = async (id: string) => {
   try {
     apiLogger.logRequest(`/posts/${id}/like`, "POST")
-    const response = await api.post(`/posts/${id}/like`, {})
+    const response = await enhancedApiService.likePost(id)
     apiLogger.logResponse(`/posts/${id}/like`, "POST", 200, response.data)
     return response.data
   } catch (error) {
@@ -186,7 +177,7 @@ export const likePost = async (id: string) => {
 export const addComment = async (postId: string, content: string) => {
   try {
     apiLogger.logRequest("/comments", "POST")
-    const response = await api.post("/comments", { post: postId, content })
+    const response = await enhancedApiService.addComment(postId, content)
     apiLogger.logResponse("/comments", "POST", 200, response.data)
     return response.data
   } catch (error) {
@@ -207,10 +198,15 @@ export const analyzeText = async (text: string) => {
   }
 }
 
-export const analyzeImage = async (image: File) => {
+export const analyzeImage = async (image: File, imagePath?: string) => {
   try {
-    // Use enhanced API service
-    return await enhancedApiService.analyzeImage(image)
+    console.log("Analyzing image:", image.name, image.type, image.size)
+    if (imagePath) {
+      console.log("Image path:", imagePath)
+    }
+
+    // Use enhanced API service with the image path
+    return await enhancedApiService.analyzeImage(image, imagePath)
   } catch (error) {
     console.error("Error analyzing image:", error)
     throw error

@@ -3,10 +3,20 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import SafeImage from "@/components/ui/safeImage"
-import { ThumbsUp, MessageCircle, Share2, Flag, MoreHorizontal, Trash2, Eye } from "lucide-react"
+import {
+  ThumbsUp,
+  MessageCircle,
+  Share2,
+  Flag,
+  MoreHorizontal,
+  Trash2,
+  Eye,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,17 +39,20 @@ import {
 } from "@/components/ui/alert-dialog"
 import type { Post as PostType } from "@/Model/post.model"
 import { useRouter } from "next/navigation"
+import { cn } from "@/lib/utils"
 
 export interface PostProps {
   post: PostType
   isOwner?: boolean
+  isCompact?: boolean
 }
 
-export function PostCard({ post, isOwner = false }: PostProps) {
+export function PostCard({ post, isOwner = false, isCompact = false }: PostProps) {
   const [liked, setLiked] = useState(post.is_liked || false)
   const [likesCount, setLikesCount] = useState(post.like_count || 0)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const { deletePost, likePost, unlikePost } = usePosts()
   const { toast } = useToast()
   const { userProfile: user } = useAuth()
@@ -86,8 +99,18 @@ export function PostCard({ post, isOwner = false }: PostProps) {
     }
   }
 
+  const toggleExpanded = () => {
+    setExpanded(!expanded)
+  }
+
   // Check if the current user is the post owner
   const canDelete = isOwner || (user && post.user && user.id === post.user.id)
+
+  // Determine if content should be truncated
+  const shouldTruncate = isCompact && !expanded && post.content?.length > 100
+
+  // Get truncated content
+  const displayContent = shouldTruncate ? `${post.content?.slice(0, 100)}...` : post.content
 
   return (
     <>
@@ -97,8 +120,14 @@ export function PostCard({ post, isOwner = false }: PostProps) {
         exit={{ opacity: 0, y: -20 }}
         whileHover={{ y: -2 }}
         transition={{ duration: 0.3 }}
+        className={cn("h-full", isCompact && "flex flex-col")}
       >
-        <Card className="mb-4 overflow-hidden border border-border/50 bg-card/50 backdrop-blur-sm">
+        <Card
+          className={cn(
+            "mb-4 overflow-hidden border border-border/50 bg-card/50 backdrop-blur-sm",
+            isCompact && "h-full flex flex-col",
+          )}
+        >
           <CardHeader className="pb-2 pt-4 px-4 flex flex-row items-center gap-3">
             <motion.div whileHover={{ scale: 1.1 }} transition={{ type: "spring", stiffness: 400, damping: 10 }}>
               <Avatar>
@@ -173,17 +202,45 @@ export function PostCard({ post, isOwner = false }: PostProps) {
             </motion.div>
           )}
 
-<CardContent className="p-0">
-            <div className="px-4 py-2">
-              <p className="text-sm">{post.content}</p>
+          <CardContent className={cn("p-0", isCompact && "flex-1 flex flex-col")}>
+            <div className={cn("px-4 py-2", isCompact && "flex-1")}>
+              <div
+                className={cn(
+                  "text-sm",
+                  isCompact && "max-h-24 overflow-hidden relative",
+                  shouldTruncate && !expanded && "line-clamp-3",
+                )}
+              >
+                <p>{displayContent}</p>
+
+                {shouldTruncate && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleExpanded}
+                    className="mt-1 text-xs text-blue-400 hover:text-blue-500 p-0 h-auto"
+                  >
+                    {expanded ? (
+                      <span className="flex items-center">
+                        Show less <ChevronUp className="ml-1 h-3 w-3" />
+                      </span>
+                    ) : (
+                      <span className="flex items-center">
+                        Read more <ChevronDown className="ml-1 h-3 w-3" />
+                      </span>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
+
             {post.image && (
-              <div className="relative aspect-video w-full overflow-hidden">
+              <div className={cn("relative w-full overflow-hidden", isCompact ? "aspect-square" : "aspect-video")}>
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.1 }}
-                  className="mt-3 rounded-md overflow-hidden"
+                  className="h-full w-full"
                 >
                   <SafeImage
                     src={post.image}
@@ -197,7 +254,7 @@ export function PostCard({ post, isOwner = false }: PostProps) {
             )}
           </CardContent>
 
-          <CardFooter className="px-4 py-2 border-t flex justify-between">
+          <CardFooter className="px-4 py-2 border-t flex justify-between mt-auto">
             <Button
               variant="ghost"
               size="sm"
@@ -235,7 +292,7 @@ export function PostCard({ post, isOwner = false }: PostProps) {
               onClick={() => router.push(`/post/${post.id}`)}
             >
               <Eye className="h-4 w-4 mr-1" />
-              View Details
+              View
             </Button>
           </CardFooter>
         </Card>

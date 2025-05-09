@@ -2,239 +2,360 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
-import { AlertCircle, AlertTriangle, CheckCircle, Upload, ImageIcon, Loader2, X } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import Image from "next/image"
+import { Badge } from "@/components/ui/badge"
+import { AlertCircle, CheckCircle, AlertTriangle, Loader2, Upload, X, EyeOff, RefreshCw } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 import { analyzeImage } from "@/services/api"
 import type { AnalysisResult } from "@/Model/cyberbulling.model"
+import { cn } from "@/lib/utils"
+import { useTheme } from "next-themes"
+import { determineModelType } from "@/utils/image-utils"
 
 export function ImageAnalysisDemo() {
+  const [image, setImage] = useState<File | null>(null)
+  const [imagePath, setImagePath] = useState<string | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [selectedImage, setSelectedImage] = useState<string | null>(null)
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null)
+  const [result, setResult] = useState<AnalysisResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [shouldBlur, setShouldBlur] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { theme } = useTheme()
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setImageFile(file)
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        setSelectedImage(event.target?.result as string)
-        setAnalysisResult(null) // Reset previous results
-      }
-      reader.readAsDataURL(file)
+  // Handle mounting for SSR
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const handleImageChange = (file: File) => {
+    setImage(file)
+    setResult(null)
+    setError(null)
+    setShouldBlur(true) // Blur image initially when uploaded
+
+    // Try to get the file path if available
+    try {
+      // @ts-ignore - This is a non-standard property that might be available in some browsers
+      const path = file.path || file.webkitRelativePath || ""
+      setImagePath(path)
+      console.log("Image path:", path)
+    } catch (error) {
+      console.log("Could not get image path:", error)
+      setImagePath(null)
     }
+
+    // Create image preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string)
+    }
+    reader.readAsDataURL(file)
   }
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = () => {
+    setIsDragging(false)
   }
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
+    setIsDragging(false)
 
-    const file = e.dataTransfer.files?.[0]
-    if (file && file.type.startsWith("image/")) {
-      setImageFile(file)
-      const reader = new FileReader()
-      reader.onload = () => {
-        setSelectedImage(reader.result as string)
-        setAnalysisResult(null) // Reset previous results
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  const resetImage = () => {
-    setSelectedImage(null)
-    setImageFile(null)
-    setAnalysisResult(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleImageChange(e.dataTransfer.files[0])
     }
   }
 
   const handleAnalyze = async () => {
-    if (!imageFile) return
+    if (!image) return
 
     setIsAnalyzing(true)
     setError(null)
-
     try {
-      const result = await analyzeImage(imageFile)
-      setAnalysisResult(result)
-      console.log("Image analysis result:", result)
-    } catch (err) {
-      console.error("Error analyzing image:", err)
+      // Determine model type based on filename or path
+      const modelType = determineModelType(image.name || imagePath)
+
+      // Use the actual API service with the image path and detected model type
+      const analysisResult = await analyzeImage(image, modelType || undefined )
+      setResult(analysisResult)
+
+      // Update blur state based on analysis result
+      if (analysisResult.status === "clean" || analysisResult.status === "flagged") {
+        setShouldBlur(false)
+      } else {
+        setShouldBlur(true)
+      }
+    } catch (error) {
+      console.error("Analysis failed:", error)
       setError("Failed to analyze image. Please try again.")
     } finally {
       setIsAnalyzing(false)
     }
   }
 
-  const getStatusColor = (status: string | undefined) => {
-    switch (status) {
-      case "clean":
-        return "text-green-500"
-      case "flagged":
-        return "text-yellow-500"
-      case "blocked":
-        return "text-red-500"
-      default:
-        return "text-gray-500"
+  const clearImage = () => {
+    // Reset all states
+    setImage(null)
+    setImagePath(null)
+    setImagePreview(null)
+    setResult(null)
+    setError(null)
+    setShouldBlur(true)
+
+    // Clear the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
     }
   }
 
-  const getStatusBadgeColor = (status: string | undefined) => {
-    switch (status) {
-      case "clean":
-        return "bg-green-900/30 text-green-400 border-green-800"
-      case "flagged":
-        return "bg-yellow-900/30 text-yellow-400 border-yellow-800"
-      case "blocked":
-        return "bg-red-900/30 text-red-400 border-red-800"
-      default:
-        return "bg-gray-900/30 text-gray-400 border-gray-800"
+  const handleSelectNewImage = () => {
+    // Trigger file input click
+    if (fileInputRef.current) {
+      fileInputRef.current.click()
     }
   }
 
-  const getPredictionBadgeColor = (prediction: string | undefined) => {
-    switch (prediction) {
-      case "not_cyberbullying":
-      case "safe":
-        return "bg-green-900/30 text-green-400 border-green-800"
-      case "negative":
-        return "bg-yellow-900/30 text-yellow-400 border-yellow-800"
-      case "offensive":
-        return "bg-red-900/30 text-red-400 border-red-800"
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "clean":
+        return "text-green-500 dark:text-green-400"
+      case "flagged":
+        return "text-yellow-500 dark:text-yellow-400"
+      case "blocked":
+        return "text-red-500 dark:text-red-400"
       default:
-        return "bg-gray-900/30 text-gray-400 border-gray-800"
+        return "text-gray-500 dark:text-gray-400"
     }
   }
 
-  const getStatusIcon = (status: string | undefined) => {
+  const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case "clean":
-        return <CheckCircle className={`h-5 w-5 ${getStatusColor(status)} mr-2`} />
+        return "border-green-500 text-green-500 dark:border-green-400 dark:text-green-400"
       case "flagged":
-        return <AlertTriangle className={`h-5 w-5 ${getStatusColor(status)} mr-2`} />
+        return "border-yellow-500 text-yellow-500 dark:border-yellow-400 dark:text-yellow-400"
       case "blocked":
-        return <AlertCircle className={`h-5 w-5 ${getStatusColor(status)} mr-2`} />
+        return "border-red-500 text-red-500 dark:border-red-400 dark:text-red-400"
+      default:
+        return "border-gray-500 text-gray-500 dark:border-gray-400 dark:text-gray-400"
+    }
+  }
+
+  const getPredictionBadgeColor = (prediction: string) => {
+    if (prediction.includes("Non_Offensive") || prediction.includes("not_cyberbulling")) {
+      return "border-green-500 text-green-500 dark:border-green-400 dark:text-green-400"
+    } else if (prediction.includes("humour")) {
+      return "border-blue-500 text-blue-500 dark:border-blue-400 dark:text-blue-400"
+    } else {
+      return "border-red-500 text-red-500 dark:border-red-400 dark:text-red-400"
+    }
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "clean":
+        return <CheckCircle className="h-5 w-5 text-green-500 dark:text-green-400 mr-2" />
+      case "flagged":
+        return <AlertTriangle className="h-5 w-5 text-yellow-500 dark:text-yellow-400 mr-2" />
+      case "blocked":
+        return <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400 mr-2" />
       default:
         return null
     }
   }
 
-  const getStatusTitle = (status: string | undefined) => {
+  const getStatusTitle = (status: string) => {
     switch (status) {
       case "clean":
-        return "Safe Image"
+        return "Safe Content"
       case "flagged":
-        return "Potentially Harmful Image"
+        return "Potentially Harmful"
       case "blocked":
-        return "Harmful Image Detected"
+        return "Harmful Content"
       default:
-        return "Analysis Result"
+        return "Unknown"
     }
   }
 
-  // Determine if image should be blurred
-  const shouldBlurImage = () => {
-    // Always blur initially before analysis
-    if (selectedImage && !analysisResult) return false
+  // Calculate image size safely
+  const getImageSize = () => {
+    if (!image) return 0
+    return Math.round((image.size || 0) / 1024)
+  }
 
-    // Blur if analysis is complete and image is blocked
-    if (selectedImage && analysisResult?.status === "blocked") return true
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  }
 
-    // Don't blur if analysis is complete and image is clean or flagged
-    return false
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 },
+    },
+  }
+
+  if (!mounted) {
+    return null
   }
 
   return (
-    <div className="space-y-6">
-      <h3 className="text-xl font-semibold">Image Analysis Demo</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <h4 className="text-sm font-medium text-gray-400 mb-2">Input Image</h4>
-          <div
-            className="aspect-video bg-gray-800 rounded-md flex items-center justify-center border border-gray-700 overflow-hidden relative"
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-          >
-            {selectedImage ? (
-              <div className="relative w-full h-full">
-                <div className={`relative ${shouldBlurImage() ? "overflow-hidden rounded-lg" : ""}`}>
-                  <Image
-                    src={selectedImage || "/placeholder.svg"}
-                    alt="Selected"
-                    className={`w-full h-full object-contain ${shouldBlurImage() ? "blur-md" : ""}`}
-                    width={400}
-                    height={300}
-                    style={{ maxHeight: "300px" }}
-                  />
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <motion.div
+        className="space-y-4"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h3 className="text-xl font-semibold text-foreground">Test Our Image Analysis</h3>
+        <p className="text-muted-foreground text-sm">
+          Upload an image to analyze how our AI detects potentially harmful visual content.
+        </p>
 
-                  {/* Blocked content overlay */}
-                  {analysisResult?.status === "blocked" && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
-                      <div className="text-white text-center p-4">
-                        <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-                        <p className="font-bold">Blocked Content</p>
-                        <p className="text-sm mt-1">
-                          {analysisResult.reason || "This image violates our content policy"}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="absolute right-2 top-2 h-8 w-8 rounded-full"
-                  onClick={resetImage}
-                >
-                  <X className="h-4 w-4" />
+        <motion.div
+          className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center min-h-[200px] transition-colors ${
+            isDragging ? "border-primary bg-primary/10" : "border-border hover:border-muted-foreground bg-card/30"
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+        >
+          {!imagePreview ? (
+            <motion.div
+              className="flex flex-col items-center"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <motion.div variants={itemVariants}>
+                <Upload className="h-10 w-10 text-muted-foreground mb-4" />
+              </motion.div>
+              <motion.p variants={itemVariants} className="text-foreground mb-2">
+                Drag & drop an image here
+              </motion.p>
+              <motion.p variants={itemVariants} className="text-muted-foreground text-sm mb-4">
+                or
+              </motion.p>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    handleImageChange(e.target.files[0])
+                  }
+                }}
+              />
+              <motion.div variants={itemVariants} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button variant="outline" onClick={handleSelectNewImage} className="transition-all">
+                  Browse Files
                 </Button>
-              </div>
-            ) : (
-              <div
-                className="text-center p-4 cursor-pointer w-full h-full flex flex-col items-center justify-center"
-                onClick={() => fileInputRef.current?.click()}
+              </motion.div>
+            </motion.div>
+          ) : (
+            <div className="relative w-full">
+              <motion.div
+                className="relative"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
               >
-                <ImageIcon className="mb-4 h-12 w-12 text-gray-600" />
-                <p className="mb-2 text-sm font-medium">Drag and drop an image here, or click to browse</p>
-                <p className="text-xs text-gray-500">Supports JPG, PNG, GIF up to 10MB</p>
-              </div>
-            )}
-          </div>
-          <input
-            id="image-upload"
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="hidden"
-          />
+                <img
+                  src={imagePreview || "/placeholder.svg"}
+                  alt="Preview"
+                  className={`max-h-[200px] mx-auto rounded ${shouldBlur ? "blur-md" : ""}`}
+                />
+                {shouldBlur && (
+                  <motion.div
+                    className="absolute inset-0 flex items-center justify-center bg-background/40 rounded"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    {result?.status === "blocked" ? (
+                      <div className="bg-destructive/80 text-destructive-foreground px-3 py-1 rounded text-sm font-medium flex items-center">
+                        <EyeOff className="h-4 w-4 mr-2" />
+                        Blocked Content
+                      </div>
+                    ) : (
+                      <div className="bg-background/80 text-foreground px-3 py-1 rounded text-sm font-medium">
+                        Analyzing required
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </motion.div>
 
-          <div className="mt-2 flex gap-2">
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              variant="outline"
-              className="border-gray-700 text-gray-300"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Upload Image
-            </Button>
-            <Button
-              onClick={handleAnalyze}
-              disabled={isAnalyzing || !selectedImage}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
+              {/* Image control buttons */}
+              <div className="absolute top-0 right-0 flex space-x-1">
+                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="bg-background/60 hover:bg-background/80 text-foreground rounded-full h-8 w-8"
+                    onClick={handleSelectNewImage}
+                    title="Change image"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="bg-background/60 hover:bg-background/80 text-foreground rounded-full h-8 w-8"
+                    onClick={clearImage}
+                    title="Clear image"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </motion.div>
+              </div>
+
+              <motion.p
+                className="text-center text-sm text-muted-foreground mt-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1 }}
+              >
+                {image?.name} ({getImageSize()} KB)
+              </motion.p>
+              {imagePath && (
+                <motion.p
+                  className="text-center text-xs text-muted-foreground mt-1 truncate max-w-full"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  Path: {imagePath}
+                </motion.p>
+              )}
+            </div>
+          )}
+        </motion.div>
+
+        {/* Image action buttons */}
+        <div className="flex gap-2">
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1">
+            <Button onClick={handleAnalyze} disabled={!image || isAnalyzing} className="w-full">
               {isAnalyzing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -244,92 +365,157 @@ export function ImageAnalysisDemo() {
                 "Analyze Image"
               )}
             </Button>
-          </div>
+          </motion.div>
+
+          {imagePreview && (
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button variant="outline" onClick={clearImage} className="px-4">
+                Clear
+              </Button>
+            </motion.div>
+          )}
         </div>
+      </motion.div>
 
-        <div>
-          <h4 className="text-sm font-medium text-gray-400 mb-2">AI Analysis</h4>
-          <div className="space-y-4 bg-gray-800/50 p-4 rounded-md border border-gray-700 h-full">
-            {error ? (
-              <div className="text-red-400 text-sm">
-                <AlertCircle className="h-5 w-5 text-red-400 mb-2" />
-                {error}
+      <motion.div
+        className="space-y-4"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <h3 className="text-xl font-semibold text-foreground">Analysis Results</h3>
+
+        <div className="h-full">
+          <motion.div
+            className={cn("rounded-lg border h-full", "bg-card text-card-foreground shadow-sm")}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="p-6 space-y-4">
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">AI Analysis</h4>
+              <div className={cn("space-y-4 p-4 rounded-md border h-full min-h-[250px]", "bg-muted/50 border-border")}>
+                <AnimatePresence mode="wait">
+                  {error ? (
+                    <motion.div
+                      className="text-destructive text-sm flex flex-col items-center justify-center h-full"
+                      key="error"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <AlertCircle className="h-8 w-8 text-destructive mb-2" />
+                      <p>{error}</p>
+                    </motion.div>
+                  ) : isAnalyzing ? (
+                    <motion.div
+                      className="flex flex-col items-center justify-center h-full"
+                      key="analyzing"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
+                      <p className="text-primary">Analyzing image...</p>
+                      <p className="text-xs text-muted-foreground mt-2">Detecting harmful visual content...</p>
+                    </motion.div>
+                  ) : result ? (
+                    <motion.div
+                      className="space-y-4"
+                      key="result"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      variants={containerVariants}
+                    >
+                      <motion.div className="flex items-center" variants={itemVariants}>
+                        {getStatusIcon(result.status)}
+                        <span className={`font-medium ${getStatusColor(result.status)}`}>
+                          {getStatusTitle(result.status)}
+                        </span>
+                      </motion.div>
+
+                      <motion.div className="space-y-2" variants={itemVariants}>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Confidence</span>
+                          <span className="text-sm font-medium text-foreground">
+                            {result.confidence ? Math.round(result.confidence * 100) : 0}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <motion.div
+                            className={cn(
+                              "h-2 rounded-full",
+                              result.status === "clean"
+                                ? "bg-green-500"
+                                : result.status === "flagged"
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500",
+                            )}
+                            initial={{ width: 0 }}
+                            animate={{
+                              width: `${result.confidence ? Math.round(result.confidence * 100) : 0}%`,
+                            }}
+                            transition={{ duration: 0.8, ease: "easeOut" }}
+                          ></motion.div>
+                        </div>
+                      </motion.div>
+
+                      <motion.div className="space-y-1" variants={itemVariants}>
+                        <p className="text-sm text-foreground">Classification:</p>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="outline" className={getStatusBadgeColor(result.status)}>
+                            Status: {result.status}
+                          </Badge>
+                          {result.prediction && (
+                            <Badge variant="outline" className={getPredictionBadgeColor(result.prediction)}>
+                              {result.prediction.replace(/_/g, " ")}
+                            </Badge>
+                          )}
+                        </div>
+                      </motion.div>
+
+                      {result.reason && (
+                        <motion.div className="text-sm text-foreground mt-2" variants={itemVariants}>
+                          <p className="font-medium mb-1">Analysis:</p>
+                          <p className="text-muted-foreground">{result.reason}</p>
+                        </motion.div>
+                      )}
+
+                      {/* Technical details */}
+                      <motion.div className="mt-4 pt-4 border-t border-border" variants={itemVariants}>
+                        <p className="text-xs text-muted-foreground mb-2">Technical Details:</p>
+                        <div
+                          className={cn(
+                            "text-xs font-mono p-2 rounded overflow-auto",
+                            "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          <pre>{JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      className="flex flex-col items-center justify-center h-full text-muted-foreground"
+                      key="empty"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <p>Upload an image and click "Analyze Image" to see results</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-            ) : isAnalyzing ? (
-              <div className="flex flex-col items-center justify-center h-full">
-                <Loader2 className="h-8 w-8 text-blue-500 animate-spin mb-2" />
-                <p className="text-blue-400">Analyzing image...</p>
-                <p className="text-xs text-gray-500 mt-2">Detecting harmful visual content...</p>
-              </div>
-            ) : analysisResult ? (
-              <>
-                <div className="flex items-center">
-                  {getStatusIcon(analysisResult.status)}
-                  <span className={`font-medium ${getStatusColor(analysisResult.status)}`}>
-                    {getStatusTitle(analysisResult.status)}
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-400">Confidence</span>
-                    <span className="text-sm font-medium">
-                      {analysisResult.confidence ? Math.round(analysisResult.confidence * 100) : 0}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div
-                      className={`${
-                        analysisResult.status === "clean"
-                          ? "bg-green-500"
-                          : analysisResult.status === "flagged"
-                            ? "bg-yellow-500"
-                            : "bg-red-500"
-                      } h-2 rounded-full`}
-                      style={{
-                        width: `${analysisResult.confidence ? Math.round(analysisResult.confidence * 100) : 0}%`,
-                      }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-300">Classification:</p>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline" className={getStatusBadgeColor(analysisResult.status)}>
-                      Status: {analysisResult.status}
-                    </Badge>
-                    {analysisResult.prediction && (
-                      <Badge variant="outline" className={getPredictionBadgeColor(analysisResult.prediction)}>
-                        {analysisResult.prediction.replace(/_/g, " ")}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                {analysisResult.reason && (
-                  <div className="text-sm text-gray-300 mt-2">
-                    <p className="font-medium mb-1">Analysis:</p>
-                    <p>{analysisResult.reason}</p>
-                  </div>
-                )}
-
-                {/* Technical details */}
-                <div className="mt-4 pt-4 border-t border-gray-700">
-                  <p className="text-xs text-gray-500 mb-2">Technical Details:</p>
-                  <div className="text-xs text-gray-500 font-mono bg-gray-900 p-2 rounded overflow-auto">
-                    {JSON.stringify(analysisResult, null, 2)}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                <p>Upload an image and click "Analyze Image" to see results</p>
-              </div>
-            )}
-          </div>
+            </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

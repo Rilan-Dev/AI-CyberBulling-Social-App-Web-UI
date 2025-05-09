@@ -3,14 +3,15 @@
 import type React from "react"
 
 import { useState } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
 import { useAuth } from "@/context/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, Loader2, Shield, CheckCircle } from "lucide-react"
+import { AlertCircle, Loader2, Shield, CheckCircle, ArrowLeft } from "lucide-react"
+import { useThemeDetector } from "@/lib/theme-utils"
 
 export default function RegisterPage() {
   const { register, loading, error, clearError } = useAuth()
@@ -18,12 +19,13 @@ export default function RegisterPage() {
     username: "",
     email: "",
     password: "",
-    password2: "",
+    confirmPassword: "",
     first_name: "",
     last_name: "",
   })
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [formStep, setFormStep] = useState(0)
+  const { isDarkTheme } = useThemeDetector()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -34,7 +36,7 @@ export default function RegisterPage() {
   }
 
   const validateForm = () => {
-    if (formData.password !== formData.password2) {
+    if (formData.password !== formData.confirmPassword) {
       setPasswordError("Passwords do not match")
       return false
     }
@@ -52,7 +54,7 @@ export default function RegisterPage() {
 
     if (!validateForm()) return
 
-    const {...userData } = formData
+    const { confirmPassword, ...userData } = formData
     await register(userData)
   }
 
@@ -94,10 +96,7 @@ export default function RegisterPage() {
       >
         <div className="flex items-center space-x-2 mb-2">
           <Shield className="h-8 w-8 text-blue-400" />
-          {/* <span className="font-bold text-2xl text-white">CyberGuard AI</span> */}
-          <span className="inline-block text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">
-              CyberSocial
-            </span>
+          <span className="font-bold text-2xl text-white">CyberGuard AI</span>
         </div>
         <h1 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
           Create Account
@@ -129,171 +128,190 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {error && (
-              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-                <Alert variant="destructive" className="bg-red-900/30 border-red-800 text-red-200">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              </motion.div>
-            )}
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="mb-6"
+                >
+                  <Alert variant="destructive" className="bg-red-900/30 border-red-800 text-red-200">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {passwordError && (
-              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-                <Alert variant="destructive" className="bg-red-900/30 border-red-800 text-red-200">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{passwordError}</AlertDescription>
-                </Alert>
-              </motion.div>
-            )}
+            <AnimatePresence>
+              {passwordError && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="mb-6"
+                >
+                  <Alert variant="destructive" className="bg-red-900/30 border-red-800 text-red-200">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{passwordError}</AlertDescription>
+                  </Alert>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {formStep === 0 && (
-                <motion.div
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  variants={formVariants}
-                  transition={{ duration: 0.4 }}
-                  className="space-y-5"
-                >
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="first_name" className="text-gray-300">
-                        First Name
-                      </Label>
-                      <Input
-                        id="first_name"
-                        name="first_name"
-                        placeholder="John"
-                        value={formData.first_name}
-                        onChange={handleChange}
-                        className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="last_name" className="text-gray-300">
-                        Last Name
-                      </Label>
-                      <Input
-                        id="last_name"
-                        name="last_name"
-                        placeholder="Doe"
-                        value={formData.last_name}
-                        onChange={handleChange}
-                        className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="username" className="text-gray-300">
-                      Username
-                    </Label>
-                    <Input
-                      id="username"
-                      name="username"
-                      placeholder="johndoe"
-                      value={formData.username}
-                      onChange={handleChange}
-                      required
-                      className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-gray-300">
-                      Email
-                    </Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="john.doe@example.com"
-                      value={formData.email}
-                      onChange={handleChange}
-                      required
-                      className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <Button
-                    type="button"
-                    onClick={nextStep}
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0 h-11"
+              <AnimatePresence mode="wait">
+                {formStep === 0 && (
+                  <motion.div
+                    key="step1"
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    variants={formVariants}
+                    transition={{ duration: 0.4 }}
+                    className="space-y-5"
                   >
-                    Continue
-                  </Button>
-                </motion.div>
-              )}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="first_name" className="text-gray-300">
+                          First Name
+                        </Label>
+                        <Input
+                          id="first_name"
+                          name="first_name"
+                          placeholder="John"
+                          value={formData.first_name}
+                          onChange={handleChange}
+                          className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="last_name" className="text-gray-300">
+                          Last Name
+                        </Label>
+                        <Input
+                          id="last_name"
+                          name="last_name"
+                          placeholder="Doe"
+                          value={formData.last_name}
+                          onChange={handleChange}
+                          className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
 
-              {formStep === 1 && (
-                <motion.div
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  variants={formVariants}
-                  transition={{ duration: 0.4 }}
-                  className="space-y-5"
-                >
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-gray-300">
-                      Password
-                    </Label>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      placeholder="Create a password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      required
-                      className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="username" className="text-gray-300">
+                        Username
+                      </Label>
+                      <Input
+                        id="username"
+                        name="username"
+                        placeholder="johndoe"
+                        value={formData.username}
+                        onChange={handleChange}
+                        required
+                        className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="password2" className="text-gray-300">
-                      Confirm Password
-                    </Label>
-                    <Input
-                      id="password2"
-                      name="password2"
-                      type="password"
-                      placeholder="Confirm your password"
-                      value={formData.password2}
-                      onChange={handleChange}
-                      required
-                      className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-gray-300">
+                        Email
+                      </Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="john.doe@example.com"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                        className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
 
-                  <div className="flex gap-4">
                     <Button
                       type="button"
-                      onClick={prevStep}
-                      variant="outline"
-                      className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
+                      onClick={nextStep}
+                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0 h-11"
                     >
-                      Back
+                      Continue
                     </Button>
-                    <Button
-                      type="submit"
-                      className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0"
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Creating...
-                        </>
-                      ) : (
-                        "Create Account"
-                      )}
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
+                  </motion.div>
+                )}
+
+                {formStep === 1 && (
+                  <motion.div
+                    key="step2"
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    variants={formVariants}
+                    transition={{ duration: 0.4 }}
+                    className="space-y-5"
+                  >
+                    <div className="space-y-2">
+                      <Label htmlFor="password" className="text-gray-300">
+                        Password
+                      </Label>
+                      <Input
+                        id="password"
+                        name="password"
+                        type="password"
+                        placeholder="Create a password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        required
+                        className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword" className="text-gray-300">
+                        Confirm Password
+                      </Label>
+                      <Input
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        type="password"
+                        placeholder="Confirm your password"
+                        value={formData.confirmPassword}
+                        onChange={handleChange}
+                        required
+                        className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="flex gap-4">
+                      <Button
+                        type="button"
+                        onClick={prevStep}
+                        variant="outline"
+                        className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
+                      >
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back
+                      </Button>
+                      <Button
+                        type="submit"
+                        className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0"
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Creating...
+                          </>
+                        ) : (
+                          "Create Account"
+                        )}
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </form>
 
             <div className="mt-6 text-center">

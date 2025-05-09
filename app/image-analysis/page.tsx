@@ -6,11 +6,12 @@ import { useState, useRef, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertCircle, CheckCircle, AlertTriangle, Upload, X, ImageIcon, Sparkles } from "lucide-react"
+import { AlertCircle, CheckCircle, AlertTriangle, Upload, X, ImageIcon, Sparkles, EyeOff, Shield } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import Image from "next/image"
 import type { AnalysisResult } from "@/Model/cyberbulling.model"
 import { analyzeImage } from "@/services/api"
+import { determineModelType } from "@/utils/image-utils"
 
 const container = {
   hidden: { opacity: 0 },
@@ -30,8 +31,10 @@ const item = {
 export default function ImageAnalysisPage() {
   const [image, setImage] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePath, setImagePath] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [shouldBlur, setShouldBlur] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>()
   const [error, setError] = useState<string | null>(null)
@@ -49,6 +52,19 @@ export default function ImageAnalysisPage() {
     const file = e.target.files?.[0]
     if (file) {
       setImageFile(file)
+      setShouldBlur(true) // Blur image initially when uploaded
+
+      // Try to get the file path if available
+      try {
+        // @ts-ignore - This is a non-standard property that might be available in some browsers
+        const path = file.path || file.webkitRelativePath || ""
+        setImagePath(path)
+        console.log("Image path:", path)
+      } catch (error) {
+        console.log("Could not get image path:", error)
+        setImagePath(null)
+      }
+
       const reader = new FileReader()
       reader.onload = () => {
         setImage(reader.result as string)
@@ -75,6 +91,19 @@ export default function ImageAnalysisPage() {
     const file = e.dataTransfer.files?.[0]
     if (file && file.type.startsWith("image/")) {
       setImageFile(file)
+      setShouldBlur(true) // Blur image initially when uploaded
+
+      // Try to get the file path if available
+      try {
+        // @ts-ignore - This is a non-standard property that might be available in some browsers
+        const path = file.path || file.webkitRelativePath || ""
+        setImagePath(path)
+        console.log("Image path:", path)
+      } catch (error) {
+        console.log("Could not get image path:", error)
+        setImagePath(null)
+      }
+
       const reader = new FileReader()
       reader.onload = () => {
         setImage(reader.result as string)
@@ -92,8 +121,19 @@ export default function ImageAnalysisPage() {
     setError(null)
 
     try {
-      const rawData = await analyzeImage(imageFile)
+      // Determine model type based on filename or path
+      const modelType = determineModelType(imageFile.name || imagePath)
+
+      // Pass the image path and model type to the API service
+      const rawData = await analyzeImage(imageFile, modelType || undefined)
       setAnalysisResult(rawData)
+
+      // Update blur state based on analysis result
+      if (rawData.status === "clean" || rawData.status === "flagged") {
+        setShouldBlur(false)
+      } else {
+        setShouldBlur(true)
+      }
     } catch (error) {
       console.error("Error analyzing image:", error)
       setError("Failed to analyze image. Please try again.")
@@ -105,8 +145,10 @@ export default function ImageAnalysisPage() {
   const resetImage = () => {
     setImage(null)
     setImageFile(null)
+    setImagePath(null)
     setAnalysisResult(null)
     setError(null)
+    setShouldBlur(true)
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
@@ -182,17 +224,33 @@ export default function ImageAnalysisPage() {
 
                     {image ? (
                       <div className="relative h-full w-full">
-                        <Image
-                          src={image || "/placeholder.svg"}
-                          alt="Uploaded image"
-                          className="mx-auto max-h-[300px] w-auto rounded-lg object-contain"
-                          width={400}
-                          height={300}
-                        />
+                        <div className="relative">
+                          <Image
+                            src={image || "/placeholder.svg"}
+                            alt="Uploaded image"
+                            className={`mx-auto max-h-[300px] w-auto rounded-lg object-contain ${shouldBlur ? "blur-md" : ""}`}
+                            width={400}
+                            height={300}
+                          />
+                          {shouldBlur && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              {analysisResult?.status === "blocked" ? (
+                                <div className="bg-destructive/80 text-destructive-foreground px-4 py-2 rounded-md text-sm font-medium flex items-center">
+                                  <Shield className="h-5 w-5 mr-2" />
+                                  Blocked Content
+                                </div>
+                              ) : (
+                                <div className="bg-background/80 text-foreground px-4 py-2 rounded-md text-sm font-medium flex items-center">
+                                  <EyeOff className="h-5 w-5 mr-2" />
+                                  Analyzing Required
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                         <motion.button
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
-                          // variants="destructive"
                           className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white shadow-lg"
                           onClick={(e) => {
                             e.stopPropagation()
@@ -201,6 +259,9 @@ export default function ImageAnalysisPage() {
                         >
                           <X className="h-4 w-4" />
                         </motion.button>
+                        {imagePath && (
+                          <p className="mt-2 text-xs text-muted-foreground truncate max-w-full">Path: {imagePath}</p>
+                        )}
                       </div>
                     ) : (
                       <>
@@ -334,6 +395,16 @@ export default function ImageAnalysisPage() {
                             <span className="text-sm text-muted-foreground">Analysis Time:</span>
                             <span className="text-sm font-medium">0.38 seconds</span>
                           </div>
+                          {imagePath && (
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">Model Used:</span>
+                              <span className="text-sm font-medium">
+                                {imagePath.includes("NSFW_Content") || imagePath.includes("Non_Offensive")
+                                  ? "NSFW Detection"
+                                  : "Primary Cyberbullying"}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </motion.div>

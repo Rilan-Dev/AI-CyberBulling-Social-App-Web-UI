@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useRef, useEffect } from "react"
+import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,8 +15,8 @@ import { useAuth } from "@/context/auth-context"
 import { analyzeImage, analyzeText } from "@/services/api"
 import type { AnalysisResult } from "@/Model/cyberbulling.model"
 import { toast } from "@/components/ui/use-toast"
-import { motion } from "framer-motion"
-import { getThemeColors, useThemeDetector } from "@/lib/theme-utils"
+import { useThemeDetector, getThemeColors } from "@/lib/theme-utils"
+import { determineModelType } from "@/utils/image-utils"
 
 // Animation variants
 const fadeIn = {
@@ -46,6 +46,7 @@ export default function CreatePostForm() {
   const [text, setText] = useState("")
   const [image, setImage] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePath, setImagePath] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
@@ -54,9 +55,8 @@ export default function CreatePostForm() {
   const [imageResult, setImageResult] = useState<AnalysisResult | null>(null)
   const [analysisComplete, setAnalysisComplete] = useState(false)
   const [pendingAnalysis, setPendingAnalysis] = useState(false)
-
   const { isDarkTheme, mounted } = useThemeDetector()
-  
+
   // Get theme colors
   const colors = getThemeColors(isDarkTheme)
 
@@ -71,6 +71,18 @@ export default function CreatePostForm() {
     const file = e.target.files?.[0]
     if (file) {
       setImageFile(file)
+
+      // Try to get the file path if available
+      try {
+        // @ts-ignore - This is a non-standard property that might be available in some browsers
+        const path = file.path || file.webkitRelativePath || ""
+        setImagePath(path)
+        console.log("Image path:", path)
+      } catch (error) {
+        console.log("Could not get image path:", error)
+        setImagePath(null)
+      }
+
       const reader = new FileReader()
       reader.onload = () => {
         setImage(reader.result as string)
@@ -98,6 +110,18 @@ export default function CreatePostForm() {
     const file = e.dataTransfer.files?.[0]
     if (file && file.type.startsWith("image/")) {
       setImageFile(file)
+
+      // Try to get the file path if available
+      try {
+        // @ts-ignore - This is a non-standard property that might be available in some browsers
+        const path = file.path || file.webkitRelativePath || ""
+        setImagePath(path)
+        console.log("Image path:", path)
+      } catch (error) {
+        console.log("Could not get image path:", error)
+        setImagePath(null)
+      }
+
       const reader = new FileReader()
       reader.onload = () => {
         setImage(reader.result as string)
@@ -112,6 +136,7 @@ export default function CreatePostForm() {
   const resetImage = () => {
     setImage(null)
     setImageFile(null)
+    setImagePath(null)
     setImageResult(null)
     setAnalysisComplete(false)
     if (fileInputRef.current) {
@@ -151,7 +176,10 @@ export default function CreatePostForm() {
       // Analyze image if present
       if (imageFile) {
         try {
-          const imageData = await analyzeImage(imageFile)
+          // Determine model type based on filename or path
+          const modelType = determineModelType(imageFile.name || imagePath)
+          // Pass the image path to the API service
+          const imageData = await analyzeImage(imageFile, modelType || undefined)
           console.log("Image analysis result:", imageData)
           newImageResult = imageData
           setImageResult(imageData)
@@ -292,7 +320,7 @@ export default function CreatePostForm() {
   // Update the canSubmit function to check for pending analysis
   const canSubmit = () => {
     if (isSubmitting || isAnalyzing) return false
-    if (!imageFile) return false // Image is required
+    if (!text.trim() && !image) return false
     if (pendingAnalysis) return false // Don't allow submission if analysis is pending
 
     // If analysis is complete, strictly prevent submission if any content is blocked
@@ -379,6 +407,10 @@ export default function CreatePostForm() {
     }
   }, [pendingAnalysis, isAnalyzing, isSubmitting])
 
+  if (!mounted) {
+    return null // Prevent hydration mismatch
+  }
+
   return (
     <div className={`min-h-screen ${colors.gradientPrimary} relative overflow-hidden`}>
       <div className="absolute inset-0 overflow-hidden">
@@ -439,12 +471,12 @@ export default function CreatePostForm() {
                               ? "bg-green-900/20 text-green-300 border border-green-800/50"
                               : "bg-green-50 text-green-700 border border-green-200"
                             : textResult.status === "flagged"
-                            ? isDarkTheme
-                              ? "bg-yellow-900/20 text-yellow-300 border border-yellow-800/50"
-                              : "bg-yellow-50 text-yellow-700 border border-yellow-200"
-                            : isDarkTheme
-                            ? "bg-red-900/20 text-red-300 border border-red-800/50"
-                            : "bg-red-50 text-red-700 border border-red-200"
+                              ? isDarkTheme
+                                ? "bg-yellow-900/20 text-yellow-300 border border-yellow-800/50"
+                                : "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                              : isDarkTheme
+                                ? "bg-red-900/20 text-red-300 border border-red-800/50"
+                                : "bg-red-50 text-red-700 border border-red-200"
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -466,8 +498,8 @@ export default function CreatePostForm() {
                       isDragging
                         ? "border-blue-500 bg-blue-900/10"
                         : isDarkTheme
-                        ? "border-gray-700 hover:border-blue-500"
-                        : "border-gray-300 hover:border-blue-500"
+                          ? "border-gray-700 hover:border-blue-500"
+                          : "border-gray-300 hover:border-blue-500"
                     }`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
@@ -527,6 +559,12 @@ export default function CreatePostForm() {
                             <X className="h-4 w-4" />
                           </Button>
                         </motion.div>
+
+                        {imagePath && (
+                          <p className="text-center text-xs text-muted-foreground mt-1 truncate max-w-full">
+                            Path: {imagePath}
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <>
@@ -554,12 +592,12 @@ export default function CreatePostForm() {
                               ? "bg-green-900/20 text-green-300 border border-green-800/50"
                               : "bg-green-50 text-green-700 border border-green-200"
                             : imageResult.status === "flagged"
-                            ? isDarkTheme
-                              ? "bg-yellow-900/20 text-yellow-300 border border-yellow-800/50"
-                              : "bg-yellow-50 text-yellow-700 border border-yellow-200"
-                            : isDarkTheme
-                            ? "bg-red-900/20 text-red-300 border border-red-800/50"
-                            : "bg-red-50 text-red-700 border border-red-200"
+                              ? isDarkTheme
+                                ? "bg-yellow-900/20 text-yellow-300 border border-yellow-800/50"
+                                : "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                              : isDarkTheme
+                                ? "bg-red-900/20 text-red-300 border border-red-800/50"
+                                : "bg-red-50 text-red-700 border border-red-200"
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -572,6 +610,14 @@ export default function CreatePostForm() {
                           </span>
                         </div>
                         {imageResult.reason && <p className="mt-1 text-sm">{imageResult.reason}</p>}
+                        {imagePath && (
+                          <p className="mt-1 text-xs">
+                            Model:{" "}
+                            {imagePath.includes("NSFW_Content") || imagePath.includes("Non_Offensive")
+                              ? "NSFW Detection"
+                              : "Primary Cyberbullying"}
+                          </p>
+                        )}
                       </div>
                     </motion.div>
                   )}
@@ -616,9 +662,7 @@ export default function CreatePostForm() {
                             : "border-green-200 bg-green-50 text-green-700"
                         }
                       >
-                        <CheckCircle
-                          className={`h-5 w-5 ${isDarkTheme ? "text-green-400" : "text-green-600"}`}
-                        />
+                        <CheckCircle className={`h-5 w-5 ${isDarkTheme ? "text-green-400" : "text-green-600"}`} />
                         <AlertTitle className={isDarkTheme ? "text-green-300" : "text-green-700"}>
                           Content Ready to Post
                         </AlertTitle>
@@ -636,9 +680,7 @@ export default function CreatePostForm() {
                             : "border-yellow-200 bg-yellow-50 text-yellow-700"
                         }
                       >
-                        <AlertTriangle
-                          className={`h-5 w-5 ${isDarkTheme ? "text-yellow-400" : "text-yellow-600"}`}
-                        />
+                        <AlertTriangle className={`h-5 w-5 ${isDarkTheme ? "text-yellow-400" : "text-yellow-600"}`} />
                         <AlertTitle className={isDarkTheme ? "text-yellow-300" : "text-yellow-700"}>
                           Content Flagged
                         </AlertTitle>
@@ -660,9 +702,7 @@ export default function CreatePostForm() {
                             : "border-red-200 bg-red-50 text-red-700"
                         }
                       >
-                        <AlertCircle
-                          className={`h-5 w-5 ${isDarkTheme ? "text-red-400" : "text-red-600"}`}
-                        />
+                        <AlertCircle className={`h-5 w-5 ${isDarkTheme ? "text-red-400" : "text-red-600"}`} />
                         <AlertTitle className={isDarkTheme ? "text-red-300" : "text-red-700"}>
                           Content Blocked
                         </AlertTitle>
@@ -685,9 +725,11 @@ export default function CreatePostForm() {
                   <Button
                     variant="outline"
                     onClick={() => router.back()}
-                    className={isDarkTheme 
-                      ? "border-gray-700 text-gray-300 hover:bg-gray-800" 
-                      : "border-gray-300 text-gray-700 hover:bg-gray-100"}
+                    className={
+                      isDarkTheme
+                        ? "border-gray-700 text-gray-300 hover:bg-gray-800"
+                        : "border-gray-300 text-gray-700 hover:bg-gray-100"
+                    }
                   >
                     Cancel
                   </Button>
@@ -725,4 +767,3 @@ export default function CreatePostForm() {
     </div>
   )
 }
-
