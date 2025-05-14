@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AlertCircle, RefreshCw } from "lucide-react"
 import ErrorBoundary from "next/dist/client/components/error-boundary"
-import { enhancedApiService } from "@/services/enhanced-api"
+import { enhancedApiService } from "@/services/analysis-api"
 import { Post } from "@/Model/post.model"
 
 export function ApiDataDisplay() {

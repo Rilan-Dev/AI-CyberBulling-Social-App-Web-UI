@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { enhancedApiService } from "@/services/enhanced-api"
+import { enhancedApiService } from "@/services/analysis-api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"

@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { AlertCircle, CheckCircle, AlertTriangle, Loader2, Upload, X, EyeOff, RefreshCw } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { analyzeImage } from "@/services/api"
 import type { AnalysisResult } from "@/Model/cyberbulling.model"
 import { cn } from "@/lib/utils"
 import { useTheme } from "next-themes"
 import { determineModelType } from "@/utils/image-utils"
+import { analysisService } from "@/services/analysis-api"
 
 export function ImageAnalysisDemo() {
   const [image, setImage] = useState<File | null>(null)
@@ -84,7 +84,7 @@ export function ImageAnalysisDemo() {
       const modelType = determineModelType(image.name || imagePath)
 
       // Use the actual API service with the image path and detected model type
-      const analysisResult = await analyzeImage(image, modelType || undefined )
+      const analysisResult = await analysisService.analyzeImage(image, modelType || undefined )
       setResult(analysisResult)
 
       // Update blur state based on analysis result

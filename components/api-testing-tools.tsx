@@ -10,8 +10,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { InfoIcon, AlertCircle, CheckCircle, Send, Upload, X } from "lucide-react"
-import * as apiService from "@/services/api"
 import Image from "next/image"
+import { analysisService } from "@/services/analysis-api"
+import { userService } from "@/services/user.service"
+import { postService } from "@/services/post.service"
 
 export function ApiTestingTools() {
   const [endpoint, setEndpoint] = useState("/api/analyze-text")
@@ -62,27 +64,27 @@ export function ApiTestingTools() {
       // Handle different endpoints
       if (endpoint === "/api/analyze-text" || endpoint.includes("/analyze-text")) {
         const textData = JSON.parse(requestBody)
-        result = await apiService.analyzeText(textData.text)
+        result = await analysisService.analyzeText(textData.text)
       } else if (endpoint === "/api/analyze-image" || endpoint.includes("/analyze-image")) {
         if (!image) {
           throw new Error("Image is required for image analysis")
         }
-        result = await apiService.analyzeImage(image)
+        result = await analysisService.analyzeImage(image)
       } else if (endpoint === "/api/token/" || endpoint.includes("/token")) {
         const { username, password } = JSON.parse(requestBody)
-        result = await apiService.login(username, password)
+        result = await userService.login(username, password)
       } else if (endpoint === "/api/users/register/" || endpoint.includes("/users/register")) {
         const userData = JSON.parse(requestBody)
-        result = await apiService.register(userData)
+        result = await userService.register(userData)
       } else if (endpoint === "/api/users/me/" || endpoint.includes("/users/me")) {
-        result = await apiService.getCurrentUser()
+        result = await userService.getCurrentUser()
       } else if (endpoint === "/api/posts" || endpoint.includes("/posts")) {
         if (method === "GET") {
-          result = await apiService.getPosts()
+          result = await postService.getPosts()
         } else if (method === "POST") {
           if (contentType === "application/json") {
             const postData = JSON.parse(requestBody)
-            result = await apiService.createPost(postData)
+            result = await postService.createPost(postData)
           } else {
             // Handle multipart/form-data
             const formData = new FormData()
@@ -100,16 +102,16 @@ export function ApiTestingTools() {
               formData.append("image", image)
             }
 
-            result = await apiService.createPost(formData)
+            result = await postService.createPost(formData)
           }
         }
       } else if (endpoint.includes("/posts/") && endpoint.includes("/like")) {
         const postId = endpoint.split("/posts/")[1].split("/like")[0]
-        result = await apiService.likePost(postId)
+        result = await postService.toggleLike(Number(postId))
       } else if (endpoint === "/api/comments" || endpoint.includes("/comments")) {
         if (method === "POST") {
           const { post, content } = JSON.parse(requestBody)
-          result = await apiService.addComment(post, content)
+          result = await postService.addComment(post, content)
         }
       } else {
         throw new Error("Endpoint not supported in this testing tool")

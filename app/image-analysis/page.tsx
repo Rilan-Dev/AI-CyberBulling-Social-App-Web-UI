@@ -10,8 +10,8 @@ import { AlertCircle, CheckCircle, AlertTriangle, Upload, X, ImageIcon, Sparkles
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import Image from "next/image"
 import type { AnalysisResult } from "@/Model/cyberbulling.model"
-import { analyzeImage } from "@/services/api"
 import { determineModelType } from "@/utils/image-utils"
+import { analysisService } from "@/services/analysis-api"
 
 const container = {
   hidden: { opacity: 0 },
@@ -125,7 +125,7 @@ export default function ImageAnalysisPage() {
       const modelType = determineModelType(imageFile.name || imagePath)
 
       // Pass the image path and model type to the API service
-      const rawData = await analyzeImage(imageFile, modelType || undefined)
+      const rawData = await analysisService.analyzeImage(imageFile, modelType || undefined)
       setAnalysisResult(rawData)
 
       // Update blur state based on analysis result

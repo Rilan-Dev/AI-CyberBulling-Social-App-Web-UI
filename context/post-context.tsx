@@ -21,19 +21,24 @@ interface PostContextType {
 
 const PostContext = createContext<PostContextType | undefined>(undefined)
 
+import { useRef } from "react"
+
 export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
+  const hasFetched = useRef(false) // prevent multiple fetches
 
   const fetchPosts = useCallback(async () => {
+    if (hasFetched.current) return
+    hasFetched.current = true
+
     setLoading(true)
     setError(null)
     try {
       console.log("Fetching posts from API...")
       const fetchedPosts = await postService.getPosts()
-      // Ensure we always have an array
       if (fetchedPosts && Array.isArray(fetchedPosts)) {
         console.log(`Successfully fetched ${fetchedPosts.length} posts`)
         setPosts(fetchedPosts)
@@ -49,12 +54,17 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "Failed to load posts",
         variant: "destructive",
       })
-      // If we couldn't get posts, set an empty array
       setPosts([])
     } finally {
       setLoading(false)
     }
   }, [toast])
+
+  // Load posts on initial render
+  useEffect(() => {
+    console.log("PostProvider mounted, fetching initial posts")
+    fetchPosts()
+  }, [fetchPosts])
 
   // Function to add a new post
   const addPost = async (formData: FormData): Promise<Post | null> => {
@@ -200,12 +210,6 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshPosts = async () => {
     await fetchPosts()
   }
-
-  // Load posts on initial render
-  useEffect(() => {
-    console.log("PostProvider mounted, fetching initial posts")
-    fetchPosts()
-  }, [fetchPosts])
 
   return (
     <PostContext.Provider

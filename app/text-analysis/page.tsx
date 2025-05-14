@@ -8,8 +8,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { AlertCircle, CheckCircle, AlertTriangle, Sparkles } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import type { AnalysisResult } from "@/Model/cyberbulling.model"
-import { analyzeText } from "@/services/api"
 import { Badge } from "@/components/ui/badge"
+import { analysisService } from "@/services/analysis-api"
 
 const container = {
   hidden: { opacity: 0 },
@@ -46,8 +46,7 @@ export default function TextAnalysisPage() {
     setIsAnalyzing(true)
 
     try {
-      const data = await analyzeText(text)
-      setAnalysisResult(data)
+      setAnalysisResult(await analysisService.analyzeText(text))
     } catch (error) {
       console.error("Error analyzing text:", error)
     } finally {

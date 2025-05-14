@@ -12,11 +12,11 @@ import { AlertCircle, AlertTriangle, CheckCircle, ImageIcon, X, Loader2 } from "
 import Image from "next/image"
 import { usePosts } from "@/context/post-context"
 import { useAuth } from "@/context/auth-context"
-import { analyzeImage, analyzeText } from "@/services/api"
 import type { AnalysisResult } from "@/Model/cyberbulling.model"
 import { toast } from "@/components/ui/use-toast"
 import { useThemeDetector, getThemeColors } from "@/lib/theme-utils"
 import { determineModelType } from "@/utils/image-utils"
+import { analysisService } from "@/services/analysis-api"
 
 // Animation variants
 const fadeIn = {
@@ -159,7 +159,7 @@ export default function CreatePostForm() {
       // Analyze text if present
       if (text.trim()) {
         try {
-          const textData = await analyzeText(text)
+          const textData = await analysisService.analyzeText(text)
           console.log("Text analysis result:", textData)
           newTextResult = textData
           setTextResult(textData)
@@ -179,7 +179,7 @@ export default function CreatePostForm() {
           // Determine model type based on filename or path
           const modelType = determineModelType(imageFile.name || imagePath)
           // Pass the image path to the API service
-          const imageData = await analyzeImage(imageFile, modelType || undefined)
+          const imageData = await analysisService.analyzeImage(imageFile, modelType || undefined)
           console.log("Image analysis result:", imageData)
           newImageResult = imageData
           setImageResult(imageData)

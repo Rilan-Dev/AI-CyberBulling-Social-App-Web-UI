@@ -14,6 +14,7 @@ export function ApiDocumentation() {
   const renderEndpoint = (endpoint: any) => {
     return (
       <Card
+        id={endpoint.path}
         key={endpoint.path}
         className="mb-4 cursor-pointer hover:border-primary transition-colors"
         onClick={() => setSelectedEndpoint(endpoint.path === selectedEndpoint ? null : endpoint.path)}

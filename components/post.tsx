@@ -202,7 +202,7 @@ export function PostCard({ post, isOwner = false, isCompact = false }: PostProps
             </motion.div>
           )}
 
-          <CardContent className={cn("p-0", isCompact && "flex-1 flex flex-col")}>
+          <CardContent direction="col" className={cn("p-0", isCompact && "flex-1")}>
             <div className={cn("px-4 py-2", isCompact && "flex-1")}>
               <div
                 className={cn(

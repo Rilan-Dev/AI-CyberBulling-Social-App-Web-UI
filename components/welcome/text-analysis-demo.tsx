@@ -1,77 +1,80 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { AlertCircle, CheckCircle, AlertTriangle, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { analyzeText } from "@/services/api"
-import type { AnalysisResult } from "@/Model/cyberbulling.model"
-import { useTheme } from "next-themes"
-import { cn } from "@/lib/utils"
+import type React from "react";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertCircle, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import type { AnalysisResult } from "@/Model/cyberbulling.model";
+import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
+import { analysisService } from "@/services/analysis-api";
 
 export function TextAnalysisDemo() {
-  const [text, setText] = useState("")
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [result, setResult] = useState<AnalysisResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const { theme } = useTheme()
-  const [mounted, setMounted] = useState(false)
+  const [text, setText] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
   // Mount effect for SSR compatibility
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
   // Sample texts for demonstration
   const sampleTexts = {
-    harmful: "Turner did not withhold his disappointment. Turner called the court an abominable conclave of negro hating demons (with one exception) who issued another decree that colored men and women must be driven into Jim Crow cars whenever it suits the whim of any white community.",
-    borderline: "If they r in Muslim country it doesn't mean they have to accept and support the terrorism..why u people can't digest the truth ? Radical Islamic terrorism have kept the world under threat..what the hell is being done by the radical Muslims terrorist these days to spread corona ?",
-    safe: "For what it's worth, I don't believe that ISIS has 30,000 to 50,000 terrorists in Mosul.  Their inability to reinforce elsewhere says not."
-  }
+    harmful:
+      "Turner did not withhold his disappointment. Turner called the court an abominable conclave of negro hating demons (with one exception) who issued another decree that colored men and women must be driven into Jim Crow cars whenever it suits the whim of any white community.",
+    borderline:
+      "If they r in Muslim country it doesn't mean they have to accept and support the terrorism..why u people can't digest the truth ? Radical Islamic terrorism have kept the world under threat..what the hell is being done by the radical Muslims terrorist these days to spread corona ?",
+    safe: "For what it's worth, I don't believe that ISIS has 30,000 to 50,000 terrorists in Mosul.  Their inability to reinforce elsewhere says not.",
+  };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setText(e.target.value)
+    setText(e.target.value);
     // Reset results when text changes
-    setResult(null)
-    setError(null)
-  }
+    setResult(null);
+    setError(null);
+  };
 
   const handleSampleText = (type: keyof typeof sampleTexts) => {
-    setText(sampleTexts[type])
-    setResult(null)
-    setError(null)
-  }
+    setText(sampleTexts[type]);
+    setResult(null);
+    setError(null);
+  };
 
   const analyzeContent = async () => {
     if (!text.trim()) {
-      setError("Please enter some text to analyze")
-      return
+      setError("Please enter some text to analyze");
+      return;
     }
 
-    setIsAnalyzing(true)
-    setError(null)
-
-    try {
-      const analysisResult = await analyzeText(text)
-      setResult(analysisResult)
-    } catch (err) {
-      console.error("Analysis error:", err)
-      setError("Failed to analyze text. Please try again.")
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }
+    setResult(
+      await analysisService
+        .analyzeText(text)
+        .then((res: AnalysisResult) => {
+          setIsAnalyzing(false);
+          return res;
+        })
+        .catch((err) => {
+          setError(err);
+          setIsAnalyzing(false);
+          return null;
+        })
+    );
+  };
 
   const getStatusBadge = () => {
-    if (!result) return null
+    if (!result) return null;
 
     const variants = {
       initial: { opacity: 0, y: -10 },
       animate: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-    }
+    };
 
     switch (result.status) {
       case "clean":
@@ -85,7 +88,7 @@ export function TextAnalysisDemo() {
             <CheckCircle className="w-3 h-3 mr-1" />
             Safe
           </motion.span>
-        )
+        );
       case "flagged":
         return (
           <motion.span
@@ -97,7 +100,7 @@ export function TextAnalysisDemo() {
             <AlertTriangle className="w-3 h-3 mr-1" />
             Flagged
           </motion.span>
-        )
+        );
       case "blocked":
         return (
           <motion.span
@@ -109,39 +112,42 @@ export function TextAnalysisDemo() {
             <AlertCircle className="w-3 h-3 mr-1" />
             Blocked
           </motion.span>
-        )
+        );
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   const renderAnalysisResult = () => {
-    if (!result) return null
+    if (!result) return null;
 
-    let alertVariant: "default" | "destructive" | null = null
-    let icon = null
-    let title = ""
-    let description = ""
+    let alertVariant: "default" | "destructive" | null = null;
+    let icon = null;
+    let title = "";
+    let description = "";
 
     switch (result.status) {
       case "clean":
-        alertVariant = "default"
-        icon = <CheckCircle className="h-4 w-4 text-green-500" />
-        title = "Content is safe"
-        description = "No cyberbullying detected in this text."
-        break
+        alertVariant = "default";
+        icon = <CheckCircle className="h-4 w-4 text-green-500" />;
+        title = "Content is safe";
+        description = "No cyberbullying detected in this text.";
+        break;
       case "flagged":
-        alertVariant = "default"
-        icon = <AlertTriangle className="h-4 w-4 text-yellow-500" />
-        title = "Content may contain cyberbullying"
-        description = result.reason || "This content has been flagged for review."
-        break
+        alertVariant = "default";
+        icon = <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+        title = "Content may contain cyberbullying";
+        description =
+          result.reason || "This content has been flagged for review.";
+        break;
       case "blocked":
-        alertVariant = "destructive"
-        icon = <AlertCircle className="h-4 w-4" />
-        title = "Content blocked"
-        description = result.reason || "This content contains cyberbullying and has been blocked."
-        break
+        alertVariant = "destructive";
+        icon = <AlertCircle className="h-4 w-4" />;
+        title = "Content blocked";
+        description =
+          result.reason ||
+          "This content contains cyberbullying and has been blocked.";
+        break;
     }
 
     return (
@@ -172,21 +178,31 @@ export function TextAnalysisDemo() {
             "rounded-md p-4 text-sm",
             "bg-gray-100 dark:bg-gray-800",
             "border border-gray-200 dark:border-gray-700",
-            "transition-colors duration-200",
+            "transition-colors duration-200"
           )}
         >
-          <h4 className="text-gray-700 dark:text-gray-300 font-medium mb-2">Analysis Details</h4>
+          <h4 className="text-gray-700 dark:text-gray-300 font-medium mb-2">
+            Analysis Details
+          </h4>
           <div className="grid grid-cols-2 gap-2">
             <div className="text-gray-600 dark:text-gray-400">Status:</div>
-            <div className="text-gray-900 dark:text-white">{getStatusBadge()}</div>
+            <div className="text-gray-900 dark:text-white">
+              {getStatusBadge()}
+            </div>
 
             <div className="text-gray-600 dark:text-gray-400">Confidence:</div>
-            <div className="text-gray-900 dark:text-white">{(result.confidence * 100).toFixed(2)}%</div>
+            <div className="text-gray-900 dark:text-white">
+              {(result.confidence * 100).toFixed(2)}%
+            </div>
 
             {result.prediction && (
               <>
-                <div className="text-gray-600 dark:text-gray-400">Prediction:</div>
-                <div className="text-gray-900 dark:text-white">{result.prediction}</div>
+                <div className="text-gray-600 dark:text-gray-400">
+                  Prediction:
+                </div>
+                <div className="text-gray-900 dark:text-white">
+                  {result.prediction}
+                </div>
               </>
             )}
           </div>
@@ -200,26 +216,28 @@ export function TextAnalysisDemo() {
             "rounded-md p-4 text-sm",
             "bg-gray-100 dark:bg-gray-800",
             "border border-gray-200 dark:border-gray-700",
-            "transition-colors duration-200",
+            "transition-colors duration-200"
           )}
         >
-          <h4 className="text-gray-700 dark:text-gray-300 font-medium mb-2">Technical Details</h4>
+          <h4 className="text-gray-700 dark:text-gray-300 font-medium mb-2">
+            Technical Details
+          </h4>
           <pre
             className={cn(
               "text-xs overflow-auto max-h-40 p-2 rounded",
               "bg-gray-200 dark:bg-gray-900",
-              "text-gray-800 dark:text-gray-300",
+              "text-gray-800 dark:text-gray-300"
             )}
           >
             {JSON.stringify(result, null, 2)}
           </pre>
         </motion.div>
       </motion.div>
-    )
-  }
+    );
+  };
 
   if (!mounted) {
-    return null // Avoid rendering until client-side to prevent hydration issues
+    return null; // Avoid rendering until client-side to prevent hydration issues
   }
 
   return (
@@ -238,7 +256,7 @@ export function TextAnalysisDemo() {
             className={cn(
               "transition-colors duration-300",
               "bg-green-100 hover:bg-green-200 border-green-300 text-green-800",
-              "dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:border-green-800 dark:text-green-400",
+              "dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:border-green-800 dark:text-green-400"
             )}
           >
             Try Safe Example
@@ -253,7 +271,7 @@ export function TextAnalysisDemo() {
             className={cn(
               "transition-colors duration-300",
               "bg-yellow-100 hover:bg-yellow-200 border-yellow-300 text-yellow-800",
-              "dark:bg-yellow-900/20 dark:hover:bg-yellow-900/30 dark:border-yellow-800 dark:text-yellow-400",
+              "dark:bg-yellow-900/20 dark:hover:bg-yellow-900/30 dark:border-yellow-800 dark:text-yellow-400"
             )}
           >
             Try Borderline Example
@@ -268,7 +286,7 @@ export function TextAnalysisDemo() {
             className={cn(
               "transition-colors duration-300",
               "bg-red-100 hover:bg-red-200 border-red-300 text-red-800",
-              "dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:border-red-800 dark:text-red-400",
+              "dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:border-red-800 dark:text-red-400"
             )}
           >
             Try Harmful Example
@@ -286,7 +304,7 @@ export function TextAnalysisDemo() {
           className={cn(
             "min-h-[120px] transition-colors duration-300",
             "bg-white border-gray-300 focus:border-blue-500",
-            "dark:bg-gray-800 dark:border-gray-700 dark:focus:border-blue-400",
+            "dark:bg-gray-800 dark:border-gray-700 dark:focus:border-blue-400"
           )}
           value={text}
           onChange={handleTextChange}
@@ -323,7 +341,7 @@ export function TextAnalysisDemo() {
           className={cn(
             "w-full transition-all duration-300",
             "bg-blue-600 hover:bg-blue-700",
-            "dark:bg-blue-700 dark:hover:bg-blue-800",
+            "dark:bg-blue-700 dark:hover:bg-blue-800"
           )}
         >
           {isAnalyzing ? (
@@ -337,7 +355,19 @@ export function TextAnalysisDemo() {
         </Button>
       </motion.div>
 
-      <AnimatePresence>{result && renderAnalysisResult()}</AnimatePresence>
+      <AnimatePresence>
+        {result && (
+          <motion.div
+            key="analysis-result"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.3 }}
+          >
+            {renderAnalysisResult()}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -347,10 +377,12 @@ export function TextAnalysisDemo() {
           "mt-8 rounded-lg p-4",
           "bg-gray-100 dark:bg-gray-800/50",
           "border border-gray-200 dark:border-gray-700",
-          "transition-colors duration-300",
+          "transition-colors duration-300"
         )}
       >
-        <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-gray-100">How Our Text Analysis Works</h3>
+        <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-gray-100">
+          How Our Text Analysis Works
+        </h3>
         <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
           <motion.li
             initial={{ opacity: 0, x: -10 }}
@@ -390,5 +422,5 @@ export function TextAnalysisDemo() {
         </ol>
       </motion.div>
     </div>
-  )
+  );
 }

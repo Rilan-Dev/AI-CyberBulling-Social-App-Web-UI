@@ -32,7 +32,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
   }, [pathname])
 
   // Special case for welcome page - don't wrap in AuthProvider or ProtectedRoute
-  if (pathname === "/welcome") {
+  if (pathname === "/welcome" || pathname === "/abutest") {
     return (
       <html lang="en" suppressHydrationWarning>
         <body className={inter.className}>
@@ -51,7 +51,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
       <html lang="en" suppressHydrationWarning>
         <body className={`${inter.className} bg-black`}>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-            <AuthProvider>
+            {/* <AuthProvider> */}
               <AnimatePresence mode="wait">
                 <motion.div
                   key={pageKey}
@@ -64,7 +64,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
                 </motion.div>
               </AnimatePresence>
               <Toaster />
-            </AuthProvider>
+            {/* </AuthProvider> */}
           </ThemeProvider>
         </body>
       </html>
@@ -75,8 +75,8 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} bg-black`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <AuthProvider>
-            <ProtectedRoute>
+          {/* <AuthProvider> */}
+            {/* <ProtectedRoute> */}
               {showNavbar && <SiteHeader />}
               <AnimatePresence mode="wait">
                 <motion.div
@@ -89,9 +89,9 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
                   {children}
                 </motion.div>
               </AnimatePresence>
-            </ProtectedRoute>
+            {/* </ProtectedRoute> */}
             <Toaster />
-          </AuthProvider>
+          {/* </AuthProvider> */}
         </ThemeProvider>
       </body>
     </html>
