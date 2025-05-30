@@ -1,0 +1,142 @@
+/* Theme-specific overrides to ensure themes are applied correctly */
+
+/* Corporate Theme */
+.theme-corporate {
+  background-color: hsl(210, 50%, 98%);
+  color: hsl(215, 25%, 27%);
+}
+
+.theme-corporate .bg-background {
+  background-color: hsl(210, 50%, 98%) !important;
+}
+
+.theme-corporate .text-foreground {
+  color: hsl(215, 25%, 27%) !important;
+}
+
+.theme-corporate .bg-card {
+  background-color: hsl(0, 0%, 100%) !important;
+}
+
+.theme-corporate .text-card-foreground {
+  color: hsl(215, 25%, 27%) !important;
+}
+
+.theme-corporate .bg-primary {
+  background-color: hsl(215, 60%, 25%) !important;
+}
+
+.theme-corporate .text-primary-foreground {
+  color: hsl(210, 40%, 98%) !important;
+}
+
+.theme-corporate .border {
+  border-color: hsl(215, 32%, 88%) !important;
+}
+
+/* Elegant Theme */
+.theme-elegant {
+  background-color: hsl(260, 30%, 99%);
+  color: hsl(260, 25%, 20%);
+}
+
+.theme-elegant .bg-background {
+  background-color: hsl(260, 30%, 99%) !important;
+}
+
+.theme-elegant .text-foreground {
+  color: hsl(260, 25%, 20%) !important;
+}
+
+.theme-elegant .bg-card {
+  background-color: hsl(0, 0%, 100%) !important;
+}
+
+.theme-elegant .text-card-foreground {
+  color: hsl(260, 25%, 20%) !important;
+}
+
+.theme-elegant .bg-primary {
+  background-color: hsl(260, 30%, 30%) !important;
+}
+
+.theme-elegant .text-primary-foreground {
+  color: hsl(260, 40%, 98%) !important;
+}
+
+.theme-elegant .border {
+  border-color: hsl(260, 30%, 90%) !important;
+}
+
+/* Tech Theme */
+.theme-tech {
+  background-color: hsl(200, 30%, 98%);
+  color: hsl(200, 50%, 20%);
+}
+
+.theme-tech .bg-background {
+  background-color: hsl(200, 30%, 98%) !important;
+}
+
+.theme-tech .text-foreground {
+  color: hsl(200, 50%, 20%) !important;
+}
+
+.theme-tech .bg-card {
+  background-color: hsl(0, 0%, 100%) !important;
+}
+
+.theme-tech .text-card-foreground {
+  color: hsl(200, 50%, 20%) !important;
+}
+
+.theme-tech .bg-primary {
+  background-color: hsl(200, 70%, 30%) !important;
+}
+
+.theme-tech .text-primary-foreground {
+  color: hsl(0, 0%, 100%) !important;
+}
+
+.theme-tech .border {
+  border-color: hsl(200, 30%, 90%) !important;
+}
+
+/* Warm Theme */
+.theme-warm {
+  background-color: hsl(25, 30%, 98%);
+  color: hsl(25, 50%, 20%);
+}
+
+.theme-warm .bg-background {
+  background-color: hsl(25, 30%, 98%) !important;
+}
+
+.theme-warm .text-foreground {
+  color: hsl(25, 50%, 20%) !important;
+}
+
+.theme-warm .bg-card {
+  background-color: hsl(0, 0%, 100%) !important;
+}
+
+.theme-warm .text-card-foreground {
+  color: hsl(25, 50%, 20%) !important;
+}
+
+.theme-warm .bg-primary {
+  background-color: hsl(25, 70%, 45%) !important;
+}
+
+.theme-warm .text-primary-foreground {
+  color: hsl(0, 0%, 100%) !important;
+}
+
+.theme-warm .border {
+  border-color: hsl(25, 30%, 90%) !important;
+}
+
+/* Force theme application */
+.force-theme {
+  transition: none !important;
+}

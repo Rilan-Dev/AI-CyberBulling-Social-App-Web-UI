@@ -20,6 +20,20 @@ const labelVariants = cva(
         "4xl": "text-4xl",
         "5xl": "text-5xl",
       },
+      strength:{
+        bold: "font-bold",
+        normal: "font-normal",
+        light: "font-light",
+        thin: "font-thin",
+        black: "font-black",
+        extralight: "font-extralight",
+        extrabold: "font-extrabold",
+        semibold: "font-semibold",
+        medium: "font-medium",
+        regular: "font-regular",
+        hairline: "font-hairline",
+        bolder: "font-bolder",
+      },
       labelColor: {
         default: "text-foreground",
         trackingtight: "tracking-tight",
@@ -42,7 +56,7 @@ export interface LabelProps
 const Label = React.forwardRef<
   React.ElementRef<typeof LabelPrimitive.Root>,
   LabelProps
->(({ className, size, labelColor, ...props }, ref) => {
+>(({ className, size, labelColor,strength, ...props }, ref) => {
   return (
     <LabelPrimitive.Root
       ref={ref}
