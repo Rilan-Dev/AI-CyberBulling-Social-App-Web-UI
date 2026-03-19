@@ -1,11 +1,12 @@
 import type React from "react";
 import { AuthProvider } from "@/context/auth-context";
+import { PostProvider } from "@/context/post-context";
 import "./globals.css";
 import { ThemeProvider } from "@/lib/Theme-Switcher/theme-provider";
 import { ThemeInitializer } from "@/lib/Theme-Switcher/theme-init";
-import { EnhancedThemeSwitcher } from "@/lib/Theme-Switcher/enhanced-theme-switcher";
 import { Metadata } from "next";
 import { FloatingThemeSwitcher } from "@/lib/Theme-Switcher/floating-theme-switcher";
+import { Toaster } from "@/components/ui/toaster";
 
 export default function RootLayout({
   children,
@@ -20,14 +21,18 @@ export default function RootLayout({
           <ThemeInitializer />
           {/* <LocaleProvider defaultLocale="en">
             <AuthProvider> */}
+          <AuthProvider>
+            <PostProvider>
               {children}
               {/* <IdleTimer />
               <ToastContainer /> */}
-
+              <Toaster />
               <FloatingThemeSwitcher />
               {/* {process.env.NODE_ENV !== "production" && <ThemeDebug />} */}
-            {/* </AuthProvider>
+              {/* </AuthProvider>
           </LocaleProvider> */}
+            </PostProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

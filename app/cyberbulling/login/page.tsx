@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -14,7 +14,7 @@ import Link from "next/link"
 import Cookies from "js-cookie"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-export default function LoginPage() {
+function LoginContent() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -193,5 +193,13 @@ export default function LoginPage() {
         </motion.div>
       </motion.div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">Loading...</div>}>
+      <LoginContent />
+    </React.Suspense>
   )
 }

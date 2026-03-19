@@ -9,7 +9,7 @@ import {
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import type { UserProfile } from "@/Model/users.model";
-import { get } from "http";
+
 import { userService } from "@/services/user.service";
 
 interface AuthContextType {
