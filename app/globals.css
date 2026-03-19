@@ -1,10 +1,5 @@
-/* Import the main theme definitions from styles/globals.css */
 @import "../styles/globals.css";
 @import "../styles/theme-fixes.css";
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 body {
   font-family: Arial, Helvetica, sans-serif;
