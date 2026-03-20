@@ -22,14 +22,14 @@ function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get("redirect") || "/"
-  // const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated } = useAuth()
 
   // Check if already authenticated
-  // useEffect(() => {
-  //   if (isAuthenticated) {
-  //     window.location.href = redirect
-  //   }
-  // }, [isAuthenticated, redirect])
+  useEffect(() => {
+    if (isAuthenticated) {
+      window.location.href = redirect
+    }
+  }, [isAuthenticated, redirect])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,7 +47,7 @@ function LoginContent() {
 
       console.log("Debug cookie set:", Cookies.get("debug_cookie"))
 
-      // await login(username, password)
+      await login(username, password)
 
       // Note: The login function now handles the redirect with window.location.href
     } catch (err) {
