@@ -22,6 +22,24 @@ A modern, responsive social media web application that leverages AI to create a 
 - **🌓 Dark/Light Mode**: Full theme support for comfortable viewing in any environment.
 - **🛠️ API Integration Tools**: Built-in API testing and documentation viewer for developers.
 
+## 🧠 AI-Driven User Workflow
+
+The Frontend seamlessly integrates AI detection into the user experience to promote platform safety.
+
+### 🛡️ Real-time Content Guard
+- **Automatic Analysis**: When creating a new post, the application automatically sends text and images to the AI backend for a safety check.
+- **Instant Moderation Labels**: Posts are immediately tagged with **"Clean"**, **"Flagged"**, or **"Blocked"** badges based on the AI's confidence score and reasoning.
+- **Moderation Transparency**: Users are notified of the specific reason (e.g., "Age-based discrimination") if their content is flagged.
+
+### 🧪 Interactive AI Sandbox
+- **Text Analysis**: A dedicated page where users can input raw text to see the AI's prediction and confidence percentage.
+- **Image Analysis**: A specialized uploader for scanning images for humor, negative sentiment, or NSFW content.
+- **Developer API Docs**: An integrated documentation viewer that allows developers to test the AI endpoints directly from the UI.
+
+### 📊 Safety Analytics
+- **Visual Insights**: The dashboard uses **Recharts** to visualize platform-wide safety trends and user-specific moderation history.
+- **History Tracking**: Dedicated views for reviewing previous text and image analysis results.
+
 ## 📸 Key Features Showcase
 
 ### 📱 Modern Social Feed
