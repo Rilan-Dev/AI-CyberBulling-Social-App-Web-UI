@@ -153,9 +153,11 @@ class APIService {
   }
 
   private async handleRequest<T>(method: string, url: string, config: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    console.log(`APIService: handleRequest ${method} ${url}`, config);
     apiLogger.logRequest(url, method);
     try {
       const response = await this.axiosInstance.request<T>({ method, url, ...config })
+      console.log(`APIService: handleRequest SUCCESS ${method} ${url}`, response.status);
       return {
         success: true,
         data: response.data,

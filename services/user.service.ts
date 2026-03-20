@@ -8,9 +8,12 @@ export const userService = {
 
   // Authentication APIs
   login: async (username: string, password: string) => {
+    console.log("UserService: login called for", username);
     try {
       // Updated endpoint to match Django REST framework's token auth
+      console.log("UserService: calling apiService.create with endpoint", API_PATHS.LOGIN);
       const response = await apiService.create<AuthTokens>({ endpoint: API_PATHS.LOGIN, body: { username, password }})
+      console.log("UserService: apiService.create response", response);
 
       if (!response.success) {
         return Promise.reject("Login failed. Please check your credentials.")

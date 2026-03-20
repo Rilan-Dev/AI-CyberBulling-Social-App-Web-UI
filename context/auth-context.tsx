@@ -86,11 +86,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (username: string, password: string) => {
+    console.log("AuthContext: login called for", username);
     setLoading(true);
     setError(null);
 
     try {
+      console.log("AuthContext: calling userService.login");
       const loginResponse = await userService.login(username, password);
+      console.log("AuthContext: userService.login response received", loginResponse);
 
       if (loginResponse) {
         // Get user data
