@@ -101,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           // Redirect to home or the original requested page
           const params = new URLSearchParams(window.location.search);
-          const redirectPath = params.get("redirect") || "/";
+          const redirectPath = params.get("redirect") || "/cyberbulling/home";
           router.push(redirectPath);
         } else {
           return Promise.reject("Failed to get user data after login");

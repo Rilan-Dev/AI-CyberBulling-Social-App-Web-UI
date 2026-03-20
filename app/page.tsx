@@ -21,7 +21,7 @@ function LoginContent() {
   const [error, setError] = useState("")
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams.get("redirect") || "/"
+  const redirect = searchParams.get("redirect") || "/cyberbulling/home"
   const { login, isAuthenticated } = useAuth()
 
   // Check if already authenticated
