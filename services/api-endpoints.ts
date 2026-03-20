@@ -16,7 +16,8 @@ export const API_PATHS = {
   
   // Post endpoints
   POSTS: 'posts',
-  POST_DETAIL: (id: number) => `posts/${id}`,
+  POST_DELETE: `posts`,
+  POST_EDIT: (id: number) => `posts/${id}`,
   POST_LIKE: (id: number) => `posts/${id}/like`,
   POST_LIKES: (id: number) => `posts/${id}/likes`,
   

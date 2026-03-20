@@ -1,9 +1,9 @@
 export interface AnalysisResult {
-  status: "clean" | "flagged" | "blocked",
+  status: "clean" | "flagged" | "blocked"
   confidence: number
-  processed_text: string
-  prediction: "humour" | "negative" | "offensive"
+  processed_text?: string
+  prediction: "humour" | "negative" | "offensive" | "not_cyberbullying" | string
   reason: string | null
   success: boolean
-  filename: string | null
+  filename?: string | null
 }

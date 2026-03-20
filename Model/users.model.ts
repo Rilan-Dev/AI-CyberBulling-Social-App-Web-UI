@@ -22,6 +22,11 @@ export interface User {
     createdAt: string
     updatedAt: string
   }
+
+  export interface AuthTokens {
+    access: string
+    refresh: string
+  }
   
   export type UserModel = UserProfile
   

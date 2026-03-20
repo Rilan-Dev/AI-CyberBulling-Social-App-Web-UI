@@ -1,307 +1,225 @@
-"use client";
+"use client"
 
-import type React from "react";
-import { createContext, useContext, useState, useEffect } from "react";
-import * as api from "@/lib/api";
-import { apiService } from "@/services/api.service";
-import { API_PATHS } from "@/services/api-endpoints";
-import { Post } from "@/Model/post.model";
-import { User } from "@/Model/users.model";
-import { ApiResponse } from "@/services/base-api.service";
-// Types for our posts
+import type React from "react"
+import { createContext, useContext, useState, useEffect, useCallback } from "react"
+import type { Post } from "@/Model/post.model"
+import { postService } from "@/services/post.service"
+import { useToast } from "@/components/ui/use-toast"
+
 interface PostContextType {
-  posts: Post[];
-  loading: boolean;
-  addPost: (
-    post: Omit<Post, "id" | "likes" | "comments" | "timestamp" | "created_at"> & { image: File | string | null }
-  ) => Promise<void>;
-  likePost: (id: string | number) => void;
-  unlikePost: (id: string | number) => void;
-  addComment: (id: string | number, comment: string) => void;
-  refreshPosts: () => Promise<void>;
+  posts: Post[]
+  loading: boolean
+  error: string | null
+  fetchPosts: () => Promise<void>
+  addPost: (postData: FormData) => Promise<Post | null>
+  deletePost: (id: number) => Promise<void>
+  likePost: (postId: number) => Promise<void>
+  unlikePost: (postId: number) => Promise<void>
+  addComment: (postId: number, content: string) => Promise<void>
+  refreshPosts: () => Promise<void>
 }
 
-const PostContext = createContext<PostContextType | undefined>(undefined);
+const PostContext = createContext<PostContextType | undefined>(undefined)
 
-// Sample user for demo
-export const currentUser: User = {
-  id: 0,
-  firstName: "Current User",
-  lastName: "Current User",
-  username: "currentuser",
-  email: "",
-};
+import { useRef } from "react"
 
+export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [posts, setPosts] = useState<Post[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
+  const hasFetched = useRef(false) // prevent multiple fetches
 
-export function PostProvider({ children }: { children: React.ReactNode }) {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const fetchPosts = useCallback(async () => {
+    if (hasFetched.current) return
+    hasFetched.current = true
 
-  // Fetch posts on initial load
-  useEffect(() => {
-    fetchPosts();
-  }, []);
-
-  // Function to fetch posts from API
-  const fetchPosts = async () => {
-    setLoading(true);
+    setLoading(true)
+    setError(null)
     try {
-      const { results, count, next, previous } =
-        await apiService.getAllPaginated<Post>({ endpoint: API_PATHS.POSTS });
-      console.log("Fetched posts:", results);
-      // Check if data exists and is an array
-      if (Array.isArray(results)) {
-        console.log("Data is an array:", results);
-        // If data is already in the expected format (from mock API)
-        if (results.length > 0 && "user" in results[0]) {
-          setPosts(results as Post[]);
-          console.log("Set posts:", results);
-        } else {
-          // Transform API data to match our Post interface
-          const transformedPosts = results.map((post) => ({
-            id: post.id,
-            user: {
-              id: post.user.id,
-              firstName: `${post.user.firstName || ""}`.trim() || post.user.username,
-              lastName: ` ${post.user.lastName || ""}`.trim() || post.user.username,
-              username: post.user.username,
-              email: post.user.email,
-            },
-            content: post.content,
-            image: post.image,
-            likes: post.like_count || 0,
-            comments: Array.isArray(post.comments)
-              ? post.comments.length
-              : post.comments || 0,
-            timestamp: new Date(post.created_at).toLocaleString(),
-            status: post.status,
-            reason: post.reason,
-          })) as unknown as Post[];
-          setPosts(transformedPosts);
-        }
-      } else if (
-        results &&
-        typeof results === "object" &&
-        "results" in results
-      ) {
-        // Handle case where data is wrapped in an ApiResponse
-        const responseData = results as unknown as ApiResponse;
-        if (Array.isArray(responseData.rawResponse)) {
-          setPosts(responseData.rawResponse);
-        } else {
-          console.warn(
-            "API response data is not an array:",
-            responseData.rawResponse
-          );
-          setPosts([]);
-        }
+      console.log("Fetching posts from API...")
+      const fetchedPosts = await postService.getPosts()
+      if (fetchedPosts && Array.isArray(fetchedPosts)) {
+        console.log(`Successfully fetched ${fetchedPosts.length} posts`)
+        setPosts(fetchedPosts)
       } else {
-        // Handle case where data is not an array
-        console.warn("API did not return an array of posts:", results);
-        setPosts([]);
+        console.warn("API did not return an array of posts:", fetchedPosts)
+        setPosts([])
       }
     } catch (error) {
-      console.error("Error fetching posts:", error);
-      // If we couldn't get posts, set an empty array
-      setPosts([]);
+      console.error("Error fetching posts:", error)
+      setError("Failed to fetch posts")
+      toast({
+        title: "Error",
+        description: "Failed to load posts",
+        variant: "destructive",
+      })
+      setPosts([])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }, [toast])
+
+  // Load posts on initial render
+  useEffect(() => {
+    console.log("PostProvider mounted, fetching initial posts")
+    fetchPosts()
+  }, [fetchPosts])
 
   // Function to add a new post
-  const addPost = async (
-    newPostData: Omit<
-      Post,
-      "id" | "likes" | "comments" | "timestamp" | "created_at"
-    >
-  ) => {
+  const addPost = async (formData: FormData): Promise<Post | null> => {
     try {
-      // If image is a string URL, we need to handle it differently
-      if (typeof newPostData.image === "string") {
-        const newPost = await api.createPost({
-          content: newPostData.content,
-          image_url: newPostData.image,
-          status: newPostData.status,
-          reason: newPostData.reason,
+      // Log the FormData to verify it contains the image
+      console.log("FormData being sent to API:")
+      for (const pair of formData.entries()) {
+        console.log(`${pair[0]}: ${typeof pair[1] === "object" ? "File object" : pair[1]}`)
+      }
+
+      // Make sure we're using FormData
+      const newPost = await postService.createPost(formData)
+
+      if (newPost) {
+        fetchPosts()
+      }
+      return null
+    } catch (error) {
+      console.error("Error adding post:", error)
+      toast({
+        title: "Error",
+        description: "Failed to create post",
+        variant: "destructive",
+      })
+      return null
+    }
+  }
+
+  const deletePost = async (id: number) => {
+    try {
+      // Make sure we're using FormData
+      const deletePost = await postService.deletePost(id)
+
+      if (deletePost) {
+        fetchPosts()
+      }
+    } catch (error) {
+      console.error("Error deleting post:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete post",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const likePost = async (postId: number) => {
+    try {
+      const result = await postService.toggleLike(postId)
+
+      // Update the post in the state
+      setPosts((prevPosts) => {
+        if (!Array.isArray(prevPosts)) {
+          console.warn("prevPosts is not an array:", prevPosts)
+          return []
+        }
+
+        return prevPosts.map((post) => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              is_liked: !post.is_liked,
+              like_count: post.is_liked ? post.like_count - 1 : post.like_count + 1,
+            }
+          }
+          return post
         })
-        // If the response is already in the expected format (from mock API)
-        if (newPost && typeof newPost === "object" && "user" in newPost) {
-          setPosts((prevPosts) => [newPost as Post, ...prevPosts])
-          return
+      })
+    } catch (err) {
+      console.error("Error liking post:", err)
+      toast({
+        title: "Error",
+        description: "Failed to like post",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const unlikePost = async (postId: number) => {
+    try {
+      await postService.toggleLike(postId) // Same endpoint toggles like status
+
+      // Update the post in the state
+      setPosts((prevPosts) => {
+        if (!Array.isArray(prevPosts)) {
+          console.warn("prevPosts is not an array:", prevPosts)
+          return []
         }
-        // Transform the response to match our Post interface
-        const transformedPost: Post = {
-          id: newPost.id,
-          user: {
-            id: newPost.user.id,
-            firstName: `${newPost.user.firstName || ""}`.trim() || newPost.user.username,
-            lastName: ` ${newPost.user.lastName || ""}`.trim() || newPost.user.username,
-            username: newPost.user.username,
-            email: newPost.user.email,
-            // avatar: newPost.user.profile?.profile_picture || "/placeholder.svg?height=40&width=40",
-          },
-          content: newPost.content,
-          image: newPost.image,
-          like_count: newPost.like_count,
-          comments: newPost.comments,
-          created_at: newPost.created_at,
-          status: newPost.status,
-          reason: newPost.reason,
-          confidence: newPost.confidence,
-          is_liked: newPost.is_liked,
-          text_analysis: newPost.text_analysis,
-          image_analysis: newPost.image_analysis,
-        }
-        setPosts((prevPosts) => [transformedPost, ...prevPosts])
-      }
-      // If image is a File object
-      else if (typeof newPostData.image === "object" && typeof File !== "undefined" && (newPostData.image as unknown as object) instanceof File) {
-        const formData = new FormData()
-        formData.append("content", newPostData.content)
-        if (newPostData.image) {
-          formData.append("image", newPostData.image);
-        }
-        const newPost = await api.createPost(formData)
-        // If the response is already in the expected format (from mock API)
-        if (newPost && typeof newPost === "object" && "user" in newPost) {
-          setPosts((prevPosts) => [newPost as Post, ...prevPosts])
-          return
-        }
-        // Transform the response to match our Post interface
-        const transformedPost: Post = {
-          id: newPost.id,
-          user: {
-            id: newPost.user.id,
-            firstName: `${newPost.user.firstName || ""}`.trim() || newPost.user.username,
-            lastName: ` ${newPost.user.lastName || ""}`.trim() || newPost.user.username,
-            username: newPost.user.username,
-            email: newPost.user.email,
-          },
-          content: newPost.content,
-          image: newPost.image,
-          like_count: newPost.like_count,
-          comments: newPost.comments,
-          created_at: newPost.created_at,
-          status: newPost.status,
-          reason: newPost.reason,
-          confidence: newPost.confidence,
-          is_liked: newPost.is_liked,
-          text_analysis: newPost.text_analysis,
-          image_analysis: newPost.image_analysis,
-        }
-        setPosts((prevPosts) => [transformedPost, ...prevPosts])
-      }
-      // If no image
-      else {
-        const newPost = await api.createPost({
-          content: newPostData.content,
-          status: newPostData.status,
-          reason: newPostData.reason,
+
+        return prevPosts.map((post) => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              is_liked: false,
+              like_count: Math.max(0, post.like_count - 1),
+            }
+          }
+          return post
         })
-        // If the response is already in the expected format (from mock API)
-        if (newPost && typeof newPost === "object" && "user" in newPost) {
-          setPosts((prevPosts) => [newPost as Post, ...prevPosts])
-          return
+      })
+    } catch (err) {
+      console.error("Error unliking post:", err)
+      toast({
+        title: "Error",
+        description: "Failed to unlike post",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const addComment = async (postId: number, content: string) => {
+    try {
+      const newComment = await postService.addComment(postId, content)
+
+      // Update the post in the state with the new comment
+      setPosts((prevPosts) => {
+        if (!Array.isArray(prevPosts)) {
+          console.warn("prevPosts is not an array:", prevPosts)
+          return []
         }
-        // Transform the response to match our Post interface
-        const transformedPost: Post = {
-          id: newPost.id,
-          user: {
-            id: newPost.user.id,
-            firstName: `${newPost.user.firstName || ""}`.trim() || newPost.user.username,
-            lastName: ` ${newPost.user.lastName || ""}`.trim() || newPost.user.username,
-            username: newPost.user.username,
-            email: newPost.user.email,
-          },
-          content: newPost.content,
-          image: newPost.image,
-          like_count: newPost.like_count,
-          comments: newPost.comments,
-          created_at: newPost.created_at,
-          status: newPost.status,
-          reason: newPost.reason,
-          confidence: newPost.confidence,
-          is_liked: newPost.is_liked,
-          text_analysis: newPost.text_analysis,
-          image_analysis: newPost.image_analysis,
-        }
-        setPosts((prevPosts) => [transformedPost, ...prevPosts])
-      }
-    } catch (error) {
-      console.error("Error adding post:", error);
-      throw error;
-    }
-  };
 
-  // Function to like a post
-  const likePost = async (id: string | number) => {
-    try {
-      await api.likePost(id.toString());
-      setPosts((prevPosts) =>
-        prevPosts.map((post) => (post.id === id ? { ...post, likes: (post.like_count || 0) + 1 } : post)),
-      );
-    } catch (error) {
-      console.error("Error liking post:", error);
+        return prevPosts.map((post) => {
+          if (post.id === postId && newComment) {
+            return {
+              ...post,
+              comments: [...post.comments, newComment],
+            }
+          }
+          return post
+        })
+      })
+    } catch (err) {
+      console.error("Error adding comment:", err)
+      toast({
+        title: "Error",
+        description: "Failed to add comment",
+        variant: "destructive",
+      })
     }
-  };
-
-  // Function to unlike a post
-  const unlikePost = async (id: string | number) => {
-    try {
-      await api.likePost(id.toString()); // Same endpoint toggles like status
-      setPosts((prevPosts) =>
-        prevPosts.map((post) => (post.id === id ? { ...post, likes: Math.max(0, (post.like_count || 0) - 1) } : post)),
-      )
-    } catch (error) {
-      console.error("Error unliking post:", error);
-    }
-  };
-
-  // Function to add a comment to a post
-  const addComment = async (id: string | number, comment: string) => {
-    try {
-      // await api.addComment(id.toString(), comment);
-      // setPosts((prevPosts) =>
-      //   prevPosts.map((post) => {
-      //     if (post.id === id) {
-      //       const currentComments = Array.isArray(post.comments) ? post.comments : [];
-      //       return {
-      //         ...post,
-      //         comments: [
-      //           ...currentComments,
-      //           {
-      //             id: Date.now(),
-      //             content: comment, // Ensure 'content' is included
-      //             post: id,
-      //             user: currentUser,
-      //             reason: "",
-      //             confidence: 0,
-      //             created_at: new Date().toISOString(),
-      //             status: "new",
-      //           },
-      //         ],
-      //       };
-      //     }
-      //     return post;
-      //   })
-      // );
-    } catch (error) {
-      console.error("Error adding comment:", error);
-    }
-  };
+  }
 
   // Function to refresh posts
   const refreshPosts = async () => {
-    await fetchPosts();
-  };
+    await fetchPosts()
+  }
 
   return (
     <PostContext.Provider
       value={{
         posts,
         loading,
+        error,
+        fetchPosts,
         addPost,
+        deletePost,
         likePost,
         unlikePost,
         addComment,
@@ -310,15 +228,13 @@ export function PostProvider({ children }: { children: React.ReactNode }) {
     >
       {children}
     </PostContext.Provider>
-  );
+  )
 }
 
 export function usePosts() {
-  const context = useContext(PostContext);
+  const context = useContext(PostContext)
   if (context === undefined) {
-    throw new Error("usePosts must be used within a PostProvider");
+    throw new Error("usePosts must be used within a PostProvider")
   }
-  return context;
+  return context
 }
-
-export type { Post, User };

@@ -1,150 +1,175 @@
-"use client"
+"use client";
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-import { useRouter, usePathname } from "next/navigation"
-import * as api from "@/lib/api"
-import { User, UserProfile } from "@/Model/users.model"
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from "react";
+import { useRouter, usePathname } from "next/navigation";
+import type { UserProfile } from "@/Model/users.model";
+
+import { userService } from "@/services/user.service";
 
 interface AuthContextType {
-  userProfile: UserProfile | null
-  loading: boolean
-  error: string | null
-  login: (username: string, password: string) => Promise<void>
-  register: (userData: RegisterData) => Promise<void>
-  logout: () => Promise<void>
-  clearError: () => void
-  isAuthenticated: boolean
+  userProfile: UserProfile | null;
+  loading: boolean;
+  error: string | null;
+  login: (username: string, password: string) => Promise<void>;
+  register: (userData: RegisterData) => Promise<void>;
+  logout: () => Promise<void>;
+  clearError: () => void;
+  isAuthenticated: boolean;
 }
 
 interface RegisterData {
-  username: string
-  email: string
-  password: string
-  first_name?: string
-  last_name?: string
+  username: string;
+  email: string;
+  password: string;
+  first_name?: string;
+  last_name?: string;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
-  const pathname = usePathname()
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
 
   // Check if user is already logged in on initial load
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
         // Check if we have a token in localStorage
-        const token = localStorage.getItem("accessToken")
-        if (!token && process.env.NODE_ENV !== "development") {
-          setLoading(false)
-          return
+        const token = localStorage.getItem("accessToken");
+        const refreshToken = localStorage.getItem("refreshToken");
+
+        if (!token && !refreshToken) {
+          setIsAuthenticated(false);
+          setLoading(false);
+          return;
         }
 
-        const userData = await api.getCurrentUser()
-        if (userData) {
-          setUserProfile(userData)
+        // If we have a token, try to get the current user
+        try {
+          const userData = await userService.getCurrentUser();
+          if (userData) {
+            setUserProfile(userData);
+            setIsAuthenticated(true);
+          } else {
+            // If userData is null, clear tokens
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            setIsAuthenticated(false);
+          }
+        } catch (err) {
+          console.error("Error getting current user:", err);
+          // Clear tokens if getting user fails
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+          setIsAuthenticated(false);
         }
       } catch (err) {
-        console.error("Error checking auth status:", err)
-        // Don't set an error here, just continue with null user
+        console.error("Error checking auth status:", err);
+        setIsAuthenticated(false);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    checkAuthStatus()
-  }, [])
-
-  // Redirect to login if accessing protected route while not authenticated
-  useEffect(() => {
-    // Only apply route protection if not in development mode
-    if (process.env.NODE_ENV === "production") {
-      const protectedRoutes = ["/create-post", "/settings", "/dashboard"]
-      const publicRoutes = ["/login", "/register", "/forgot-password"]
-
-      if (!loading) {
-        if (!userProfile && protectedRoutes.some((route) => pathname?.startsWith(route))) {
-          router.push(`/login?redirect=${encodeURIComponent(pathname || "/")}`)
-        } else if (userProfile && publicRoutes.includes(pathname || "")) {
-          router.push("/")
-        }
-      }
-    } else {
-      // In development, don't redirect but still mark as not loading
-      if (loading) {
-        setLoading(false)
-      }
-    }
-  }, [userProfile, loading, pathname, router])
+    checkAuthStatus();
+  }, []);
 
   const login = async (username: string, password: string) => {
-    setLoading(true)
-    setError(null)
+    console.log("AuthContext: login called for", username);
+    setLoading(true);
+    setError(null);
 
     try {
-      await api.login(username, password)
-      const userData = await api.getCurrentUser()
-      setUserProfile(userData)
+      console.log("AuthContext: calling userService.login");
+      const loginResponse = await userService.login(username, password);
+      console.log("AuthContext: userService.login response received", loginResponse);
 
-      // Redirect to home or the original requested page
-      const params = new URLSearchParams(window.location.search)
-      const redirectPath = params.get("redirect") || "/"
-      router.push(redirectPath)
+      if (loginResponse) {
+        // Get user data
+        const userData = await userService.getCurrentUser();
+        if (userData) {
+          setUserProfile(userData);
+          setIsAuthenticated(true);
+
+          // Redirect to home or the original requested page
+          const params = new URLSearchParams(window.location.search);
+          const redirectPath = params.get("redirect") || "/cyberbulling/home";
+          router.push(redirectPath);
+        } else {
+          return Promise.reject("Failed to get user data after login");
+        }
+      }
     } catch (err: any) {
-      console.error("Login error:", err)
-      setError(err.response?.data?.detail || "Invalid username or password")
+      console.error("Login error:", err);
+      setError(
+        err.response?.data?.detail ||
+          err.message ||
+          "Invalid username or password"
+      );
+      setIsAuthenticated(false);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const register = async (userData: RegisterData) => {
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
-      await api.register(userData)
+      await userService.register(userData);
       // After registration, log the user in
-      await login(userData.username, userData.password)
+      await login(userData.username, userData.password);
     } catch (err: any) {
-      console.error("Registration error:", err)
+      console.error("Registration error:", err);
       if (err.response?.data) {
         // Format Django REST Framework validation errors
-        const errors = err.response.data
+        const errors = err.response.data;
         const errorMessages = Object.entries(errors)
           .map(([key, value]) => `${key}: ${(value as string[]).join(", ")}`)
-          .join("; ")
-        setError(errorMessages)
+          .join("; ");
+        setError(errorMessages);
       } else {
-        setError("Registration failed. Please try again.")
+        setError("Registration failed. Please try again.");
       }
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const logout = async () => {
-    setLoading(true)
+    setLoading(true);
 
     try {
-      await api.logout()
-      setUserProfile(null)
-      router.push("/login")
+      await userService.logout();
+      setUserProfile(null);
+      setIsAuthenticated(false);
+      router.push("/login");
     } catch (err) {
-      console.error("Logout error:", err)
+      console.error("Logout error:", err);
       // Even if there's an error, clear the user state
-      setUserProfile(null)
+      setUserProfile(null);
+      setIsAuthenticated(false);
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const clearError = () => {
-    setError(null)
-  }
+    setError(null);
+  };
 
   return (
     <AuthContext.Provider
@@ -156,18 +181,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         logout,
         clearError,
-        isAuthenticated: !!userProfile,
+        isAuthenticated,
       }}
     >
       {children}
     </AuthContext.Provider>
-  )
+  );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
+    throw new Error("useAuth must be used within an AuthProvider");
   }
-  return context
+  return context;
 }

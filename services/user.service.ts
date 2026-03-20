@@ -1,14 +1,81 @@
 import { apiService } from "./api.service"
 import { API_PATHS } from "./api-endpoints"
-import type { UserModel, User } from "@/Model/users.model"
+import type { UserModel, User, AuthTokens } from "@/Model/users.model"
 import type { Post } from "@/Model/post.model"
+import { apiLogger } from "./api-logger"
 
 export const userService = {
+
+  // Authentication APIs
+  login: async (username: string, password: string) => {
+    console.log("UserService: login called for", username);
+    try {
+      // Updated endpoint to match Django REST framework's token auth
+      console.log("UserService: calling apiService.create with endpoint", API_PATHS.LOGIN);
+      const response = await apiService.create<AuthTokens>({ endpoint: API_PATHS.LOGIN, body: { username, password }})
+      console.log("UserService: apiService.create response", response);
+
+      if (!response.success) {
+        return Promise.reject("Login failed. Please check your credentials.")
+      }
+      // Store the token in localStorage
+      if (response.data && response.success) {
+        localStorage.setItem("accessToken", response.data.access)
+        localStorage.setItem("refreshToken", response.data.refresh)
+      }
+      return response.data
+    } catch (error) {
+      console.error("Login error:", error)
+      throw error
+    }
+  },
+
+  register: async (userData: any) => {
+    try {
+      const response = await apiService.create<AuthTokens>({endpoint: API_PATHS.REGISTER, body: userData})
+      if (response.data && response.success) {
+        localStorage.setItem("accessToken", response.data.access)
+        localStorage.setItem("refreshToken", response.data.refresh)
+      }
+      return response.data
+    } catch (error) {
+      console.error("Registration error:", error)
+      throw error
+    }
+  },
+
+  logout: async () => {
+    try {
+      apiLogger.logRequest("/logout/", "POST")
+  
+      // For token-based auth, we just remove the tokens
+      localStorage.removeItem("accessToken")
+      localStorage.removeItem("refreshToken")
+      return { success: true }
+    } catch (error) {
+      console.error("Logout error:", error)
+      throw error
+    }
+  },
+
   // Get current user profile
   getCurrentUser: async () => {
     const response = await apiService.getData<UserModel>({
       endpoint: API_PATHS.CURRENT_USER,
     })
+
+    if (response.error && response.status === 401) {
+      localStorage.removeItem("accessToken")
+      localStorage.removeItem("refreshToken")
+
+      // If in browser context, redirect to login
+      if (typeof window !== "undefined") {
+        const currentPath = window.location.pathname
+        if (currentPath !== "/login" && currentPath !== "/register") {
+          window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`
+        }
+      }
+    }
     return response.data
   },
 
@@ -73,9 +140,10 @@ export const userService = {
 
   // Update user profile
   updateProfile: async (data: FormData) => {
+    console.log("data in updateProfile", data);
     const response = await apiService.update<UserModel>({
       endpoint: API_PATHS.CURRENT_USER,
-      queryParams: data,
+      body: data,
       headers: {
         "Content-Type": "multipart/form-data",
       },
